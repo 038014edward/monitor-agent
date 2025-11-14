@@ -4,7 +4,16 @@
   "description": "服務監控代理程式 - 自動監控並重啟指定的應用程式",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "pkg . --targets node18-win-x64 --output build/service-monitor-agent-v1.0.0.exe & node build-script.js",
+    "prebuild": "if exist build rmdir /s /q build"
+  },
+  "bin": "index.js",
+  "pkg": {
+    "assets": [
+      "config.json"
+    ],
+    "outputPath": "build"
   },
   "keywords": [
     "service",
@@ -17,5 +26,8 @@
   "license": "ISC",
   "engines": {
     "node": ">=12.0.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
   }
 }

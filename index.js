@@ -2,14 +2,23 @@ const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// 取得執行檔所在目錄（pkg 打包後使用 process.execPath）
+const APP_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
+
 // 配置檔案路徑
-const CONFIG_FILE = path.join(__dirname, 'config.json');
-const LOG_DIR = path.join(__dirname, 'logs');
+const CONFIG_FILE = path.join(APP_DIR, 'config.json');
+const LOG_DIR = path.join(APP_DIR, 'logs');
 const LOG_FILE = path.join(LOG_DIR, `monitor-${new Date().toISOString().split('T')[0]}.log`);
 
-// 確保 logs 目錄存在
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
+// 確保 logs 目錄存在（延遲建立，避免 pkg 打包問題）
+function ensureLogDir() {
+  try {
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+    }
+  } catch (error) {
+    console.error('無法建立 logs 目錄:', error.message);
+  }
 }
 
 // 日誌函數
@@ -21,7 +30,13 @@ function log(message, type = 'INFO') {
   console.log(logMessage);
 
   // 寫入日誌檔案
-  fs.appendFileSync(LOG_FILE, logMessage + '\n', 'utf8');
+  try {
+    ensureLogDir();
+    fs.appendFileSync(LOG_FILE, logMessage + '\n', 'utf8');
+  } catch (error) {
+    // 如果無法寫入檔案，至少在控制台顯示
+    console.error('無法寫入日誌檔案:', error.message);
+  }
 }
 
 function logError(message, error) {
@@ -32,20 +47,41 @@ function logError(message, error) {
   console.error(logMessage);
 
   // 寫入日誌檔案
-  fs.appendFileSync(LOG_FILE, logMessage + '\n', 'utf8');
+  try {
+    ensureLogDir();
+    fs.appendFileSync(LOG_FILE, logMessage + '\n', 'utf8');
+  } catch (err) {
+    // 如果無法寫入檔案，至少在控制台顯示
+    console.error('無法寫入日誌檔案:', err.message);
+  }
 }
 
 // 載入配置
 function loadConfig() {
   try {
     log('正在載入配置檔案...');
+    log(`配置檔案路徑: ${CONFIG_FILE}`, 'DEBUG');
+
+    if (!fs.existsSync(CONFIG_FILE)) {
+      throw new Error(`找不到配置檔案: ${CONFIG_FILE}\n請確認 config.json 與程式在同一目錄`);
+    }
+
     const configData = fs.readFileSync(CONFIG_FILE, 'utf8');
     const config = JSON.parse(configData);
     log('配置檔案載入成功');
     return config;
   } catch (error) {
     logError('無法讀取配置文件', error);
-    process.exit(1);
+    console.error('\n按任意鍵退出...');
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.once('data', () => {
+      process.exit(1);
+    });
+    // 如果 30 秒內沒有按鍵，自動退出
+    setTimeout(() => {
+      process.exit(1);
+    }, 30000);
   }
 }
 
@@ -146,7 +182,16 @@ function main() {
   // 驗證配置
   if (!config.processName || !config.exePath) {
     logError('配置文件中缺少必要參數 (processName, exePath)');
-    process.exit(1);
+    console.error('\n按任意鍵退出...');
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.once('data', () => {
+      process.exit(1);
+    });
+    setTimeout(() => {
+      process.exit(1);
+    }, 30000);
+    return;
   }
 
   log(`驗證配置: processName=${config.processName}`, 'SYSTEM');
@@ -155,7 +200,17 @@ function main() {
   // 檢查執行檔是否存在
   if (!fs.existsSync(config.exePath)) {
     logError(`找不到執行檔: ${config.exePath}`);
-    process.exit(1);
+    console.error('\n請檢查 config.json 中的路徑設定是否正確');
+    console.error('按任意鍵退出...');
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.once('data', () => {
+      process.exit(1);
+    });
+    setTimeout(() => {
+      process.exit(1);
+    }, 30000);
+    return;
   }
 
   log('執行檔路徑驗證成功', 'SYSTEM');
@@ -176,6 +231,47 @@ process.on('SIGTERM', () => {
   log('收到終止信號 (SIGTERM)，正在停止監控服務...', 'SYSTEM');
   log('========== 程式結束 ==========', 'SYSTEM');
   process.exit(0);
+});
+
+// 全域錯誤處理
+process.on('uncaughtException', (error) => {
+  console.error('\n========================================');
+  console.error('發生未預期的錯誤:');
+  console.error('========================================');
+  console.error(error);
+  console.error('\n請查看 logs 目錄中的日誌檔案了解詳細資訊');
+  console.error('按任意鍵退出...');
+
+  logError('未預期的錯誤', error);
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.once('data', () => {
+    process.exit(1);
+  });
+  setTimeout(() => {
+    process.exit(1);
+  }, 30000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('\n========================================');
+  console.error('發生未處理的 Promise 拒絕:');
+  console.error('========================================');
+  console.error(reason);
+  console.error('\n請查看 logs 目錄中的日誌檔案了解詳細資訊');
+  console.error('按任意鍵退出...');
+
+  logError('未處理的 Promise 拒絕', reason instanceof Error ? reason : new Error(String(reason)));
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.once('data', () => {
+    process.exit(1);
+  });
+  setTimeout(() => {
+    process.exit(1);
+  }, 30000);
 });
 
 // 啟動程式
