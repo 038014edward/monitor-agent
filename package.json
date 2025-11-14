@@ -1,11 +1,11 @@
 {
   "name": "service-monitor-agent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "服務監控代理程式 - 自動監控並重啟指定的應用程式",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "pkg . --targets node18-win-x64 --output build/service-monitor-agent-v1.0.0.exe & node build-script.js",
+    "build": "node build-script.js",
     "prebuild": "if exist build rmdir /s /q build"
   },
   "bin": "index.js",
