@@ -1,6 +1,7 @@
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const version = require('./package.json').version;
 
 // 取得執行檔所在目錄（pkg 打包後使用 process.execPath）
 const APP_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
@@ -39,6 +40,7 @@ function log(message, type = 'INFO') {
   }
 }
 
+// 錯誤日誌函數
 function logError(message, error) {
   const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
   const logMessage = `[${timestamp}] [ERROR] ${message}\n${error ? '詳細錯誤: ' + error.message : ''}`;
@@ -170,8 +172,9 @@ async function monitorService(config) {
 
 // 程式入口
 function main() {
+
   console.log('========================================');
-  console.log('   服務監控代理程式 v1.0');
+  console.log(`   服務監控代理程式 v${version}`);
   console.log('========================================');
   console.log('');
 
