@@ -4,14 +4,47 @@ const fs = require('fs');
 
 // 配置檔案路徑
 const CONFIG_FILE = path.join(__dirname, 'config.json');
+const LOG_DIR = path.join(__dirname, 'logs');
+const LOG_FILE = path.join(LOG_DIR, `monitor-${new Date().toISOString().split('T')[0]}.log`);
+
+// 確保 logs 目錄存在
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+// 日誌函數
+function log(message, type = 'INFO') {
+  const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
+  const logMessage = `[${timestamp}] [${type}] ${message}`;
+
+  // 輸出到控制台
+  console.log(logMessage);
+
+  // 寫入日誌檔案
+  fs.appendFileSync(LOG_FILE, logMessage + '\n', 'utf8');
+}
+
+function logError(message, error) {
+  const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
+  const logMessage = `[${timestamp}] [ERROR] ${message}\n${error ? '詳細錯誤: ' + error.message : ''}`;
+
+  // 輸出到控制台
+  console.error(logMessage);
+
+  // 寫入日誌檔案
+  fs.appendFileSync(LOG_FILE, logMessage + '\n', 'utf8');
+}
 
 // 載入配置
 function loadConfig() {
   try {
+    log('正在載入配置檔案...');
     const configData = fs.readFileSync(CONFIG_FILE, 'utf8');
-    return JSON.parse(configData);
+    const config = JSON.parse(configData);
+    log('配置檔案載入成功');
+    return config;
   } catch (error) {
-    console.error('無法讀取配置文件:', error.message);
+    logError('無法讀取配置文件', error);
     process.exit(1);
   }
 }
@@ -23,6 +56,7 @@ function checkProcess(processName) {
 
     exec(command, (error, stdout, stderr) => {
       if (error) {
+        logError('執行 tasklist 命令失敗', error);
         reject(error);
         return;
       }
@@ -37,14 +71,20 @@ function checkProcess(processName) {
 // 啟動程式
 function startProcess(exePath, workingDirectory) {
   return new Promise((resolve, reject) => {
+    log(`正在啟動程式: ${exePath}`);
+    log(`工作目錄: ${workingDirectory}`);
+
     // 使用 cmd 的 start 命令，避免 PowerShell 編碼問題
     const command = `cd /d "${workingDirectory}" && start "" "${exePath}"`;
+    log(`執行命令: ${command}`, 'DEBUG');
 
     exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
       if (error) {
+        logError('啟動程式失敗', error);
         reject(error);
         return;
       }
+      log('啟動命令已執行');
       resolve();
     });
   });
@@ -54,36 +94,40 @@ function startProcess(exePath, workingDirectory) {
 async function monitorService(config) {
   const { processName, exePath, workingDirectory, checkInterval } = config;
 
-  console.log(`[${new Date().toLocaleString('zh-TW')}] 開始監控: ${processName}`);
-  console.log(`檢查間隔: ${checkInterval / 1000} 秒`);
-  console.log(`程式路徑: ${exePath}`);
-  console.log(`工作目錄: ${workingDirectory}`);
+  log(`開始監控: ${processName}`);
+  log(`檢查間隔: ${checkInterval / 1000} 秒`);
+  log(`程式路徑: ${exePath}`);
+  log(`工作目錄: ${workingDirectory}`);
+  log(`日誌檔案: ${LOG_FILE}`);
   console.log('---'.repeat(20));
 
   setInterval(async () => {
     try {
       const isRunning = await checkProcess(processName);
-      const timestamp = new Date().toLocaleString('zh-TW');
 
       if (isRunning) {
-        console.log(`[${timestamp}] ✓ ${processName} 正在執行中`);
+        log(`✓ ${processName} 正在執行中`, 'CHECK');
       } else {
-        console.log(`[${timestamp}] ✗ ${processName} 未執行，準備啟動...`);
+        log(`✗ ${processName} 未執行，準備啟動...`, 'WARN');
 
         await startProcess(exePath, workingDirectory);
 
-        // 等待一秒後確認是否啟動成功
+        // 等待 5 秒後確認是否啟動成功
         setTimeout(async () => {
-          const isNowRunning = await checkProcess(processName);
-          if (isNowRunning) {
-            console.log(`[${new Date().toLocaleString('zh-TW')}] ✓ ${processName} 已成功啟動`);
-          } else {
-            console.log(`[${new Date().toLocaleString('zh-TW')}] ✗ ${processName} 啟動失敗，請檢查程式路徑`);
+          try {
+            const isNowRunning = await checkProcess(processName);
+            if (isNowRunning) {
+              log(`✓ ${processName} 已成功啟動`, 'SUCCESS');
+            } else {
+              log(`✗ ${processName} 啟動失敗，請檢查程式路徑`, 'ERROR');
+            }
+          } catch (error) {
+            logError('確認程式啟動狀態時發生錯誤', error);
           }
-        }, 1000);
+        }, 5000);
       }
     } catch (error) {
-      console.error(`[${new Date().toLocaleString('zh-TW')}] 錯誤:`, error.message);
+      logError('監控過程中發生錯誤', error);
     }
   }, checkInterval);
 }
@@ -95,31 +139,42 @@ function main() {
   console.log('========================================');
   console.log('');
 
+  log('========== 程式啟動 ==========', 'SYSTEM');
+
   const config = loadConfig();
 
   // 驗證配置
   if (!config.processName || !config.exePath) {
-    console.error('錯誤: 配置文件中缺少必要參數 (processName, exePath)');
+    logError('配置文件中缺少必要參數 (processName, exePath)');
     process.exit(1);
   }
 
+  log(`驗證配置: processName=${config.processName}`, 'SYSTEM');
+  log(`驗證配置: exePath=${config.exePath}`, 'SYSTEM');
+
   // 檢查執行檔是否存在
   if (!fs.existsSync(config.exePath)) {
-    console.error(`錯誤: 找不到執行檔 ${config.exePath}`);
+    logError(`找不到執行檔: ${config.exePath}`);
     process.exit(1);
   }
+
+  log('執行檔路徑驗證成功', 'SYSTEM');
 
   monitorService(config);
 }
 
 // 處理程式終止
 process.on('SIGINT', () => {
-  console.log('\n\n正在停止監控服務...');
+  console.log('\n');
+  log('收到終止信號 (SIGINT)，正在停止監控服務...', 'SYSTEM');
+  log('========== 程式結束 ==========', 'SYSTEM');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n\n正在停止監控服務...');
+  console.log('\n');
+  log('收到終止信號 (SIGTERM)，正在停止監控服務...', 'SYSTEM');
+  log('========== 程式結束 ==========', 'SYSTEM');
   process.exit(0);
 });
 
