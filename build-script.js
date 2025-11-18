@@ -5,14 +5,22 @@ const { execSync } = require('child_process');
 console.log('\n📦 正在建置部署檔案...\n');
 
 const buildDir = path.join(__dirname, 'build');
+
+// 清空 build 資料夾
+if (fs.existsSync(buildDir)) {
+  console.log('🗑️  清空 build 資料夾...');
+  fs.rmSync(buildDir, { recursive: true, force: true });
+}
+
+// 建立新的 build 資料夾
+fs.mkdirSync(buildDir, { recursive: true });
+
 const version = require('./package.json').version;
 const distDir = path.join(buildDir, `service-monitor-agent-v${version}`);
 const exeName = `service-monitor-agent-v${version}.exe`;
 
 // 建立發佈資料夾
-if (!fs.existsSync(distDir)) {
-  fs.mkdirSync(distDir, { recursive: true });
-}
+fs.mkdirSync(distDir, { recursive: true });
 
 // 直接讓 pkg 輸出到目標資料夾
 console.log('🔨 正在打包 EXE 檔案...');
