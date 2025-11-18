@@ -7,7 +7,7 @@ const version = require('./package.json').version;
 const APP_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
 
 // 配置檔案路徑
-const CONFIG_FILE = path.join(APP_DIR, 'config.json');
+const CONFIG_FILE = path.join(APP_DIR, 'config.ini');
 const LOG_DIR = path.join(APP_DIR, 'logs');
 const LOG_FILE = path.join(LOG_DIR, `monitor-${new Date().toISOString().split('T')[0]}.log`);
 
@@ -58,6 +58,42 @@ function logError(message, error) {
   }
 }
 
+// 解析 INI 格式配置檔
+function parseIniConfig(content) {
+  const config = {};
+  const lines = content.split('\n');
+  let currentSection = null;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // 跳過空行和註解
+    if (!trimmedLine || trimmedLine.startsWith(';') || trimmedLine.startsWith('#')) {
+      continue;
+    }
+
+    // 解析 Section [SectionName]
+    if (trimmedLine.startsWith('[') && trimmedLine.endsWith(']')) {
+      currentSection = trimmedLine.slice(1, -1);
+      config[currentSection] = {};
+      continue;
+    }
+
+    // 解析 Key=Value
+    const eqIndex = trimmedLine.indexOf('=');
+    if (eqIndex > 0) {
+      const key = trimmedLine.substring(0, eqIndex).trim();
+      const value = trimmedLine.substring(eqIndex + 1).trim();
+
+      if (currentSection) {
+        config[currentSection][key] = value;
+      }
+    }
+  }
+
+  return config;
+}
+
 // 載入配置
 function loadConfig() {
   try {
@@ -65,11 +101,28 @@ function loadConfig() {
     log(`配置檔案路徑: ${CONFIG_FILE}`, 'DEBUG');
 
     if (!fs.existsSync(CONFIG_FILE)) {
-      throw new Error(`找不到配置檔案: ${CONFIG_FILE}\n請確認 config.json 與程式在同一目錄`);
+      throw new Error(`找不到配置檔案: ${CONFIG_FILE}\n請確認 config.ini 與程式在同一目錄`);
     }
 
     const configData = fs.readFileSync(CONFIG_FILE, 'utf8');
-    const config = JSON.parse(configData);
+    const iniConfig = parseIniConfig(configData);
+    const config = iniConfig.Process || {};
+
+    // 轉換 checkInterval 為數字
+    if (config.checkInterval) {
+      config.checkInterval = parseInt(config.checkInterval, 10);
+    }
+
+    // 自動從 exePath 提取程式名稱和工作目錄
+    if (config.exePath) {
+      if (!config.processName) {
+        config.processName = path.basename(config.exePath);
+      }
+      if (!config.workingDirectory) {
+        config.workingDirectory = path.dirname(config.exePath);
+      }
+    }
+
     log('配置檔案載入成功');
     return config;
   } catch (error) {
