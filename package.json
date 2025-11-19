@@ -1,60 +1,16 @@
 {
   "name": "service-monitor-agent",
-  "version": "1.2.1",
-  "description": "服務監控代理程式 - 自動監控並重啟指定的應用程式",
-  "main": "electron/main.js",
+  "version": "1.0.0",
+  "main": "main.js",
   "scripts": {
-    "start": "node index.js",
-    "start:electron": "electron .",
-    "build": "node build-script.js",
-    "build:electron": "electron-builder"
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "bin": "index.js",
-  "pkg": {
-    "assets": [
-      "config.json"
-    ],
-    "outputPath": "dist"
-  },
-  "build": {
-    "appId": "com.serviceagent.monitor",
-    "productName": "服務監控代理程式",
-    "directories": {
-      "output": "dist-electron",
-      "buildResources": "build"
-    },
-    "files": [
-      "electron/**/*",
-      "config.example.ini"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "build/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
-    }
-  },
-  "keywords": [
-    "service",
-    "monitor",
-    "process",
-    "auto-restart",
-    "watchdog"
-  ],
-  "author": "",
+  "keywords": [],
+  "author": "Edward",
   "license": "ISC",
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "description": "",
   "devDependencies": {
-    "electron": "^39.2.2",
-    "electron-builder": "^26.0.12",
-    "pkg": "^5.8.1"
+    "electron": "^39.2.2"
   }
 }
