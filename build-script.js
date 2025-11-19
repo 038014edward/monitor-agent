@@ -4,27 +4,27 @@ const { execSync } = require('child_process');
 
 console.log('\n📦 正在建置部署檔案...\n');
 
-const buildDir = path.join(__dirname, 'build');
+const distDir = path.join(__dirname, 'dist');
 
-// 清空 build 資料夾
-if (fs.existsSync(buildDir)) {
-  console.log('🗑️  清空 build 資料夾...');
-  fs.rmSync(buildDir, { recursive: true, force: true });
+// 清空 dist 資料夾
+if (fs.existsSync(distDir)) {
+  console.log('🗑️  清空 dist 資料夾...');
+  fs.rmSync(distDir, { recursive: true, force: true });
 }
 
-// 建立新的 build 資料夾
-fs.mkdirSync(buildDir, { recursive: true });
+// 建立新的 dist 資料夾
+fs.mkdirSync(distDir, { recursive: true });
 
 const version = require('./package.json').version;
-const distDir = path.join(buildDir, `service-monitor-agent-v${version}`);
+const releaseDir = path.join(distDir, `service-monitor-agent-v${version}`);
 const exeName = `service-monitor-agent-v${version}.exe`;
 
 // 建立發佈資料夾
-fs.mkdirSync(distDir, { recursive: true });
+fs.mkdirSync(releaseDir, { recursive: true });
 
 // 直接讓 pkg 輸出到目標資料夾
 console.log('🔨 正在打包 EXE 檔案...');
-const exePath = path.join(distDir, exeName);
+const exePath = path.join(releaseDir, exeName);
 execSync(`pkg . --targets node18-win-x64 --output "${exePath}"`, { stdio: 'inherit' });
 
 // 確認 exe 檔案是否成功產生
@@ -37,7 +37,7 @@ if (fs.existsSync(exePath)) {
 
 // 複製 config.example.ini 作為範本
 const exampleConfigPath = path.join(__dirname, 'config.example.ini');
-const configIniPath = path.join(distDir, 'config.ini');
+const configIniPath = path.join(releaseDir, 'config.ini');
 
 if (fs.existsSync(exampleConfigPath)) {
   fs.copyFileSync(exampleConfigPath, configIniPath);
@@ -99,12 +99,12 @@ description=我的應用程式監控
 如有問題，請查看 logs 目錄中的日誌檔案
 `;
 
-const readmePath = path.join(distDir, 'README.txt');
+const readmePath = path.join(releaseDir, 'README.txt');
 fs.writeFileSync(readmePath, readmeContent, 'utf8');
 console.log('✅ 已建立部署說明: README.txt');
 
 console.log('\n✨ 部署資料夾準備完成！');
-console.log(`📂 位置: ${distDir}`);
+console.log(`📂 位置: ${releaseDir}`);
 console.log('\n📋 資料夾內容：');
 console.log(`   service-monitor-agent-v${version}/`);
 console.log('   ├── service-monitor-agent-v' + version + '.exe');
@@ -115,13 +115,13 @@ console.log('   └── README.txt');
 console.log('\n🗜️  正在建立壓縮檔...');
 
 const zipFileName = `service-monitor-agent-v${version}.zip`;
-const zipFilePath = path.join(buildDir, zipFileName).replace(/\//g, '\\');
-const distDirPath = distDir.replace(/\//g, '\\');
+const zipFilePath = path.join(distDir, zipFileName).replace(/\//g, '\\\\');
+const releaseDirPath = releaseDir.replace(/\//g, '\\\\');
 
 try {
   // 使用 PowerShell 建立壓縮檔
-  const psCommand = `Compress-Archive -Path "${distDirPath}" -DestinationPath "${zipFilePath}" -Force`;
-  execSync(`powershell -Command "${psCommand}"`, { stdio: 'inherit' });
+  const psCommand = `Import-Module Microsoft.PowerShell.Archive; Compress-Archive -Path '${releaseDirPath}' -DestinationPath '${zipFilePath}' -Force`;
+  execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand}"`, { stdio: 'inherit' });
 
   const zipFileSize = (fs.statSync(zipFilePath).size / 1024 / 1024).toFixed(2);
   console.log(`\n✅ 已建立壓縮檔: ${zipFileName}`);

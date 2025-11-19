@@ -5,15 +5,14 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "node build-script.js",
-    "prebuild": "if exist build rmdir /s /q build"
+    "build": "node build-script.js"
   },
   "bin": "index.js",
   "pkg": {
     "assets": [
       "config.json"
     ],
-    "outputPath": "build"
+    "outputPath": "dist"
   },
   "keywords": [
     "service",
