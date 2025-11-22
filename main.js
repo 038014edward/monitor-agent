@@ -17,6 +17,8 @@ const createWindow = () => {
 
 // 當 Electron 完成初始化並準備建立視窗時呼叫此方法
 app.whenReady().then(() => {
+
+  // 設置 IPC 處理器
   ipcMain.handle('ping', () => 'pong')
   createWindow()
 
