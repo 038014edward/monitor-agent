@@ -1,5 +1,5 @@
 // 使用中文註解
-const { app, BrowserWindow, ipcMain } = require('electron/main')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron/main')
 
 const path = require('node:path')
 
@@ -18,8 +18,22 @@ const createWindow = () => {
 // 當 Electron 完成初始化並準備建立視窗時呼叫此方法
 app.whenReady().then(() => {
 
-  // 設置 IPC 處理器
-  ipcMain.handle('ping', () => 'pong')
+  // 處理檔案選擇對話框
+  ipcMain.handle('dialog:openFile', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: '執行檔', extensions: ['exe'] },
+        { name: '所有檔案', extensions: ['*'] }
+      ]
+    })
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      return result.filePaths[0]
+    }
+    return null
+  })
+
   createWindow()
 
   // 在 macOS 上，當點擊停駐列圖示並且沒有其他視窗開啟時，重新建立一個視窗

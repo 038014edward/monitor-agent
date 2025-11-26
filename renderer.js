@@ -1,10 +1,12 @@
-const information = document.getElementById('info')
-information.innerText = `This app is using Chrome (v${versions.chrome()}), Node.js (v${versions.node()}), and Electron (v${versions.electron()})`
+// 取得頁面元素
+const exePathInput = document.getElementById('exePath')
+const browseBtn = document.getElementById('browseBtn')
 
-// Example of invoking the 'ping' handler in the main process
-const func = async () => {
-  const response = await window.versions.ping()
-  console.log(response) // prints out 'pong'
-}
-
-func()
+// 處理瀏覽按鈕點擊事件
+browseBtn.addEventListener('click', async () => {
+  const filePath = await window.electronAPI.openFile()
+  if (filePath) {
+    exePathInput.value = filePath
+    console.log('選擇的檔案:', filePath)
+  }
+})

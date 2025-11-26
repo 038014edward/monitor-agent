@@ -1,0 +1,169 @@
+/* 顏色變數定義 */
+:root {
+  --primary-color: #007E8A;       /* 主色：按鈕/導覽列 */
+  --secondary-color: #00558C;     /* 標題字色 */
+  --accent-color: #4CAF50;        /* 點綴：Logo 字色 */
+  --warning-color: #FF9800;       /* 強調：Logo 邊框色 */
+  --background-color: #F5F5F5;    /* 主背景色 */
+  --section-bg-color: #B8D4E3;    /* 區塊背景：較深藍灰 */
+  --text-color: #333333;          /* 一般文字顏色 */
+  --body-bg-color: #E0E0E0;       /* 頁面外層背景 */
+}
+
+/* 全域樣式 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+  padding: 20px;
+  background-color: var(--body-bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+/* 主容器 */
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  background-color: var(--background-color);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 標題樣式 */
+h1 {
+  color: var(--secondary-color);
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+  padding-bottom: 15px;
+  border-bottom: 3px solid var(--warning-color);
+}
+
+/* Logo 裝飾 (如需要可加上) */
+h1::before {
+  content: '⚙️ ';
+  color: var(--accent-color);
+}
+
+/* 表單群組 */
+.form-group {
+  margin-bottom: 25px;
+  background-color: var(--section-bg-color);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 標籤樣式 */
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--secondary-color);
+  font-size: 15px;
+}
+
+/* 檔案輸入群組 */
+.file-input-group {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* 文字輸入框 */
+input[type="text"] {
+  flex: 1;
+  padding: 12px 15px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 126, 138, 0.1);
+}
+
+input[type="text"]::placeholder {
+  color: #999;
+}
+
+/* 按鈕樣式 */
+button {
+  padding: 12px 24px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 126, 138, 0.2);
+}
+
+button:hover {
+  background-color: #006370;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 126, 138, 0.3);
+}
+
+button:active {
+  background-color: #005159;
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 126, 138, 0.2);
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 響應式設計 */
+@media (max-width: 600px) {
+  .container {
+    padding: 25px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .file-input-group {
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+  }
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.container {
+  animation: fadeIn 0.5s ease-out;
+}
