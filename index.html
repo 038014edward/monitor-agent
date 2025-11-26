@@ -17,10 +17,16 @@
     <div class="form-group">
       <label for="exePath">要監控的程式 (.exe)</label>
       <div class="file-input-group">
-        <input type="text" id="exePath" placeholder="請選擇要監控的執行檔..." readonly>
+        <input type="text" id="exePath" placeholder="請輸入或選擇執行檔路徑...">
         <button id="browseBtn">瀏覽...</button>
       </div>
     </div>
+
+    <div class="button-group">
+      <button id="saveBtn" class="save-btn">💾 保存設定</button>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
   </div>
 
   <script src="./renderer.js"></script>

@@ -1,7 +1,11 @@
 // 使用中文註解
 const { app, BrowserWindow, ipcMain, dialog } = require('electron/main')
-
+const Store = require('electron-store')
 const path = require('node:path')
+const fs = require('node:fs')
+
+// 初始化 electron-store
+const store = new Store()
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -32,6 +36,36 @@ app.whenReady().then(() => {
       return result.filePaths[0]
     }
     return null
+  })
+
+  // 處理設定保存
+  ipcMain.handle('store:saveConfig', async (event, config) => {
+    try {
+      store.set('exePath', config.exePath)
+      return { success: true, message: '設定已保存成功！' }
+    } catch (error) {
+      return { success: false, message: '保存設定失敗：' + error.message }
+    }
+  })
+
+  // 處理讀取設定
+  ipcMain.handle('store:getConfig', async () => {
+    try {
+      return {
+        exePath: store.get('exePath', '')
+      }
+    } catch (error) {
+      return { exePath: '' }
+    }
+  })
+
+  // 處理檔案存在性驗證
+  ipcMain.handle('file:checkExists', async (event, filePath) => {
+    try {
+      return fs.existsSync(filePath)
+    } catch (error) {
+      return false
+    }
   })
 
   createWindow()

@@ -133,6 +133,65 @@ button:disabled {
   box-shadow: none;
 }
 
+/* 按鈕群組 */
+.button-group {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* 保存按鈕特殊樣式 */
+.save-btn {
+  background-color: var(--accent-color);
+  padding: 14px 32px;
+  font-size: 16px;
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+}
+
+.save-btn:hover {
+  background-color: #45a049;
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.save-btn:active {
+  background-color: #3d8b40;
+}
+
+/* 狀態訊息 */
+.status-message {
+  display: none;
+  margin-top: 20px;
+  padding: 15px 20px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  animation: slideDown 0.3s ease-out;
+}
+
+.status-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 2px solid var(--accent-color);
+}
+
+.status-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 2px solid #f5c6cb;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* 響應式設計 */
 @media (max-width: 600px) {
   .container {
