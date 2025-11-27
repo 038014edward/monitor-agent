@@ -2,7 +2,8 @@
 const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron/main')
 const Store = require('electron-store')
 const path = require('node:path')
-const fs = require('node:fs')
+const fs = require('node:path')
+const { createApplicationMenu } = require('./menu')
 
 // ==================== 全域變數 ====================
 const store = new Store()
@@ -118,6 +119,7 @@ function setupIPC() {
 
 // ==================== 5. 應用程式啟動 ====================
 app.whenReady().then(() => {
+  createApplicationMenu()  // 建立應用程式選單
   setupIPC()
   createWindow()
 
