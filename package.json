@@ -9,7 +9,7 @@
     "make": "electron-forge make"
   },
   "keywords": [],
-  "author": "Edward",
+  "author": "CMUBH",
   "license": "ISC",
   "description": "",
   "devDependencies": {

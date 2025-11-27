@@ -16,7 +16,11 @@
       "port": 9222,
       "request": "attach",
       "type": "chrome",
-      "webRoot": "${workspaceFolder}"
+      "webRoot": "${workspaceFolder}",
+      "timeout": 30000,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
     },
     {
       "name": "Main",

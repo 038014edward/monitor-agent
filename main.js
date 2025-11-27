@@ -1,5 +1,5 @@
 // 使用中文註解
-const { app, BrowserWindow, ipcMain, dialog } = require('electron/main')
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron/main')
 const Store = require('electron-store')
 const path = require('node:path')
 const fs = require('node:fs')
@@ -7,16 +7,65 @@ const fs = require('node:fs')
 // 初始化 electron-store
 const store = new Store()
 
+// 只有 tray 需要宣告為全域變數（防止被垃圾回收）
+let tray = null
+
+// 建立系統托盤
+const createTray = (mainWindow) => {
+  const iconPath = path.join(__dirname, 'assets/icon-32.png')
+  tray = new Tray(iconPath)
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '開啟程式',
+      click: () => {
+        mainWindow.show()
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: '結束 service-monitor-agent',
+      click: () => {
+        app.isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setToolTip('服務監控代理程式')
+  tray.setContextMenu(contextMenu)
+
+  // 點擊托盤圖示時顯示視窗
+  tray.on('click', () => {
+    mainWindow.show()
+  })
+}
+
+// 建立主視窗
 const createWindow = () => {
-  const win = new BrowserWindow({
+  const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    icon: path.join(__dirname, 'assets/icon.ico'), // 設定視窗圖示
     webPreferences: {
       preload: path.join(__dirname, 'preload.js') // 預載入腳本的路徑
     }
   })
 
-  win.loadFile('index.html')
+  mainWindow.loadFile('index.html')
+
+  // 視窗關閉時隱藏而不是退出
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault()
+      mainWindow.hide()
+    }
+  })
+
+  // 建立托盤並傳入 mainWindow
+  createTray(mainWindow)
 }
 
 // 當 Electron 完成初始化並準備建立視窗時呼叫此方法
@@ -76,7 +125,7 @@ app.whenReady().then(() => {
   })
 })
 
-// 當所有視窗關閉時退出應用程式
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+// 當所有視窗關閉時不退出應用程式（因為有系統托盤）
+app.on('window-all-closed', (e) => {
+  e.preventDefault()
 })
