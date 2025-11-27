@@ -22,8 +22,32 @@
       </div>
     </div>
 
+    <div class="form-group">
+      <label for="intervalInput">監控間隔 (秒)</label>
+      <input type="number" id="intervalInput" min="1" max="3600" step="1" value="5" placeholder="輸入監控間隔...">
+    </div>
+
     <div class="button-group">
       <button id="saveBtn" class="save-btn">💾 保存設定</button>
+      <button id="toggleMonitorBtn" class="toggle-monitor-btn" disabled>▶️ 開始監控</button>
+    </div>
+
+    <div class="monitor-status">
+      <h3>監控狀態</h3>
+      <div class="status-info">
+        <div class="status-item">
+          <span class="status-label">監控狀態:</span>
+          <span id="monitorStatus" class="status-value">未啟動</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">程式狀態:</span>
+          <span id="processStatus" class="status-value">-</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">最後檢查:</span>
+          <span id="lastCheck" class="status-value">-</span>
+        </div>
+      </div>
     </div>
 
     <div id="statusMessage" class="status-message"></div>
