@@ -4,15 +4,19 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
+    executableName: 'ServiceMonitorAgent',
+    icon: './assets/icon', // 不需要副檔名，Electron Packager 會自動選擇適合的平台格式
   },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: 'service_monitor_agent',
-        authors: 'Edward',
-        description: 'A service monitoring agent application',
+        name: 'ServiceMonitorAgent',
+        authors: 'CMUBH',
+        description: 'A service agent monitoring application',
+        // iconUrl: 'file://' + require('pa/th').resolve(__dirname, 'tray-icon.ico'),
+        // setupIcon: './assets/icon.ico',
       },
     },
     {

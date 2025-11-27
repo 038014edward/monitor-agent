@@ -1,12 +1,14 @@
 {
   "name": "service-monitor-agent",
+  "productName": "Service Monitor Agent",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "clean": "rimraf out",
+    "package": "npm run clean && electron-forge package",
+    "make": "npm run clean && electron-forge make"
   },
   "keywords": [],
   "author": "CMUBH",
@@ -21,7 +23,8 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron/fuses": "^1.8.0",
-    "electron": "^39.2.2"
+    "electron": "^39.2.2",
+    "rimraf": "^5.0.10"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",

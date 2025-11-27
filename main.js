@@ -26,7 +26,7 @@ const createTray = (mainWindow) => {
       type: 'separator'
     },
     {
-      label: '結束 service-monitor-agent',
+      label: '結束 Service Monitor Agent',
       click: () => {
         app.isQuitting = true
         app.quit()
@@ -34,7 +34,7 @@ const createTray = (mainWindow) => {
     }
   ])
 
-  tray.setToolTip('服務監控代理程式')
+  tray.setToolTip('Service Monitor Agent')
   tray.setContextMenu(contextMenu)
 
   // 點擊托盤圖示時顯示視窗
