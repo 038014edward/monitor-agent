@@ -1,62 +1,44 @@
-// 使用中文註解
+// ==================== 引入模組 ====================
 const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron/main')
 const Store = require('electron-store')
 const path = require('node:path')
 const fs = require('node:fs')
 
-// 初始化 electron-store
+// ==================== 全域變數 ====================
 const store = new Store()
-
-// 只有 tray 需要宣告為全域變數（防止被垃圾回收）
+let mainWindow = null
 let tray = null
 
-// 建立系統托盤
-const createTray = (mainWindow) => {
-  const iconPath = path.join(__dirname, 'assets/icon-32.png')
-  tray = new Tray(iconPath)
-
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '開啟程式',
-      click: () => {
-        mainWindow.show()
-      }
-    },
-    {
-      type: 'separator'
-    },
-    {
-      label: '結束 Service Monitor Agent',
-      click: () => {
-        app.isQuitting = true
-        app.quit()
-      }
-    }
-  ])
-
-  tray.setToolTip('Service Monitor Agent')
-  tray.setContextMenu(contextMenu)
-
-  // 點擊托盤圖示時顯示視窗
-  tray.on('click', () => {
-    mainWindow.show()
-  })
+// ==================== 1. 限制單一實例 ====================
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+  process.exit(0)
 }
 
-// 建立主視窗
-const createWindow = () => {
-  const mainWindow = new BrowserWindow({
+// 當使用者嘗試開啟第二個實例時,顯示現有視窗
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+})
+
+// ==================== 2. 建立主視窗 ====================
+function createWindow() {
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    icon: path.join(__dirname, 'assets/icon.ico'), // 設定視窗圖示
+    icon: path.join(__dirname, 'assets/icon.ico'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js') // 預載入腳本的路徑
+      preload: path.join(__dirname, 'preload.js')
     }
   })
 
   mainWindow.loadFile('index.html')
 
-  // 視窗關閉時隱藏而不是退出
+  // 關閉視窗時隱藏(不退出程式)
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault()
@@ -64,14 +46,36 @@ const createWindow = () => {
     }
   })
 
-  // 建立托盤並傳入 mainWindow
-  createTray(mainWindow)
+  createTray()
 }
 
-// 當 Electron 完成初始化並準備建立視窗時呼叫此方法
-app.whenReady().then(() => {
+// ==================== 3. 建立系統托盤 ====================
+function createTray() {
+  tray = new Tray(path.join(__dirname, 'assets/icon-32.png'))
+  tray.setToolTip('Service Monitor Agent')
 
-  // 處理檔案選擇對話框
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '開啟程式',
+      click: () => mainWindow.show()
+    },
+    { type: 'separator' },
+    {
+      label: '結束程式',
+      click: () => {
+        app.isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setContextMenu(contextMenu)
+  tray.on('click', () => mainWindow.show())
+}
+
+// ==================== 4. IPC 通訊處理 ====================
+function setupIPC() {
+  // 開啟檔案選擇對話框
   ipcMain.handle('dialog:openFile', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
@@ -80,14 +84,10 @@ app.whenReady().then(() => {
         { name: '所有檔案', extensions: ['*'] }
       ]
     })
-
-    if (!result.canceled && result.filePaths.length > 0) {
-      return result.filePaths[0]
-    }
-    return null
+    return result.canceled ? null : result.filePaths[0]
   })
 
-  // 處理設定保存
+  // 儲存設定
   ipcMain.handle('store:saveConfig', async (event, config) => {
     try {
       store.set('exePath', config.exePath)
@@ -97,18 +97,16 @@ app.whenReady().then(() => {
     }
   })
 
-  // 處理讀取設定
+  // 讀取設定
   ipcMain.handle('store:getConfig', async () => {
     try {
-      return {
-        exePath: store.get('exePath', '')
-      }
+      return { exePath: store.get('exePath', '') }
     } catch (error) {
       return { exePath: '' }
     }
   })
 
-  // 處理檔案存在性驗證
+  // 檢查檔案是否存在
   ipcMain.handle('file:checkExists', async (event, filePath) => {
     try {
       return fs.existsSync(filePath)
@@ -116,16 +114,22 @@ app.whenReady().then(() => {
       return false
     }
   })
+}
 
+// ==================== 5. 應用程式啟動 ====================
+app.whenReady().then(() => {
+  setupIPC()
   createWindow()
 
-  // 在 macOS 上，當點擊停駐列圖示並且沒有其他視窗開啟時，重新建立一個視窗
+  // macOS: 點擊 Dock 圖示時重新建立視窗
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
   })
 })
 
-// 當所有視窗關閉時不退出應用程式（因為有系統托盤）
+// 關閉所有視窗時不退出(因為有系統托盤)
 app.on('window-all-closed', (e) => {
   e.preventDefault()
 })
