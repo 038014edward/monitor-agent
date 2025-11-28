@@ -14,40 +14,29 @@
   <div class="container">
     <h1>服務監控代理程式</h1>
 
-    <div class="form-group">
-      <label for="exePath">要監控的程式 (.exe)</label>
-      <div class="file-input-group">
-        <input type="text" id="exePath" placeholder="請輸入或選擇執行檔路徑...">
-        <button id="browseBtn">瀏覽...</button>
+    <!-- 新增監控項目區 -->
+    <div class="add-section">
+      <div class="input-row">
+        <input type="text" id="newExePath" placeholder="程式路徑..." class="compact-input">
+        <button id="browseBtn" class="compact-btn">📁</button>
+        <span class="interval-wrapper">
+          <span class="interval-icon">⏱️</span>
+          <input type="number" id="newInterval" min="1" max="3600" value="5" placeholder="5"
+            class="compact-input interval-input">
+          <span class="interval-unit">秒</span>
+        </span>
+        <button id="addBtn" class="add-btn">➕ 新增</button>
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="intervalInput">監控間隔 (秒)</label>
-      <input type="number" id="intervalInput" min="1" max="3600" step="1" value="5" placeholder="輸入監控間隔...">
+    <!-- 監控列表 -->
+    <div class="monitor-list" id="monitorList">
+      <!-- 動態生成的監控項目 -->
     </div>
 
-    <div class="button-group">
-      <button id="saveBtn" class="save-btn">💾 保存設定</button>
-      <button id="toggleMonitorBtn" class="toggle-monitor-btn" disabled>▶️ 開始監控</button>
-    </div>
-
-    <div class="monitor-status">
-      <h3>監控狀態</h3>
-      <div class="status-info">
-        <div class="status-item">
-          <span class="status-label">監控狀態:</span>
-          <span id="monitorStatus" class="status-value">未啟動</span>
-        </div>
-        <div class="status-item">
-          <span class="status-label">程式狀態:</span>
-          <span id="processStatus" class="status-value">-</span>
-        </div>
-        <div class="status-item">
-          <span class="status-label">最後檢查:</span>
-          <span id="lastCheck" class="status-value">-</span>
-        </div>
-      </div>
+    <div class="global-controls">
+      <button id="startAllBtn" class="control-btn">▶️ 全部開始</button>
+      <button id="stopAllBtn" class="control-btn">⏹️ 全部停止</button>
     </div>
 
     <div id="statusMessage" class="status-message"></div>

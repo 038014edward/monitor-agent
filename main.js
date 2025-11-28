@@ -10,11 +10,8 @@ const { createApplicationMenu } = require('./menu')
 const store = new Store()
 let mainWindow = null
 let tray = null
-let monitorInterval = null
-let monitorConfig = {
-  exePath: '',
-  interval: 5
-}
+// 使用 Map 來管理多個監控項目: id -> {exePath, interval, timer}
+const activeMonitors = new Map()
 
 // ==================== 1. 限制單一實例 ====================
 const gotTheLock = app.requestSingleInstanceLock()
@@ -94,28 +91,22 @@ function setupIPC() {
     return result.canceled ? null : result.filePaths[0]
   })
 
-  // 儲存設定
-  ipcMain.handle('store:saveConfig', async (event, config) => {
+  // 儲存所有監控項目設定
+  ipcMain.handle('store:saveMonitors', async (event, monitors) => {
     try {
-      store.set('exePath', config.exePath)
-      if (config.interval !== undefined) {
-        store.set('interval', config.interval)
-      }
+      store.set('monitors', monitors)
       return { success: true, message: '設定已保存成功！' }
     } catch (error) {
       return { success: false, message: '保存設定失敗：' + error.message }
     }
   })
 
-  // 讀取設定
-  ipcMain.handle('store:getConfig', async () => {
+  // 讀取所有監控項目設定
+  ipcMain.handle('store:getMonitors', async () => {
     try {
-      return {
-        exePath: store.get('exePath', ''),
-        interval: store.get('interval', 5)
-      }
+      return store.get('monitors', [])
     } catch (error) {
-      return { exePath: '', interval: 5 }
+      return []
     }
   })
 
@@ -128,24 +119,34 @@ function setupIPC() {
     }
   })
 
-  // 開始監控
+  // 開始監控特定項目
   ipcMain.handle('monitor:start', async (event, config) => {
     try {
-      monitorConfig = config
-      startProcessMonitoring()
+      const { id, exePath, interval } = config
+      startProcessMonitoring(id, exePath, interval)
       return { success: true, message: '監控已啟動' }
     } catch (error) {
       return { success: false, message: '啟動監控失敗：' + error.message }
     }
   })
 
-  // 停止監控
-  ipcMain.handle('monitor:stop', async () => {
+  // 停止監控特定項目
+  ipcMain.handle('monitor:stop', async (event, id) => {
     try {
-      stopProcessMonitoring()
+      stopProcessMonitoring(id)
       return { success: true, message: '監控已停止' }
     } catch (error) {
       return { success: false, message: '停止監控失敗：' + error.message }
+    }
+  })
+
+  // 停止所有監控
+  ipcMain.handle('monitor:stopAll', async () => {
+    try {
+      stopAllMonitoring()
+      return { success: true, message: '所有監控已停止' }
+    } catch (error) {
+      return { success: false, message: '停止所有監控失敗：' + error.message }
     }
   })
 }
@@ -169,20 +170,22 @@ function checkProcessRunning(exePath) {
   })
 }
 
-function startProcessMonitoring() {
-  if (monitorInterval) {
-    clearInterval(monitorInterval)
+function startProcessMonitoring(id, exePath, interval) {
+  // 如果已經在監控,先停止
+  if (activeMonitors.has(id)) {
+    stopProcessMonitoring(id)
   }
 
   const checkAndNotify = async () => {
-    const isRunning = await checkProcessRunning(monitorConfig.exePath)
+    const isRunning = await checkProcessRunning(exePath)
     const now = new Date().toLocaleTimeString('zh-TW')
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('monitor:status-update', {
+        id,
         isRunning,
         lastCheck: now,
-        exePath: monitorConfig.exePath
+        status: isRunning ? '執行中' : '未執行'
       })
     }
   }
@@ -191,23 +194,34 @@ function startProcessMonitoring() {
   checkAndNotify()
 
   // 設定定時檢查
-  monitorInterval = setInterval(checkAndNotify, monitorConfig.interval * 1000)
+  const timer = setInterval(checkAndNotify, interval * 1000)
+
+  // 儲存監控資訊
+  activeMonitors.set(id, { exePath, interval, timer })
 }
 
-function stopProcessMonitoring() {
-  if (monitorInterval) {
-    clearInterval(monitorInterval)
-    monitorInterval = null
-  }
+function stopProcessMonitoring(id) {
+  const monitor = activeMonitors.get(id)
+  if (monitor) {
+    clearInterval(monitor.timer)
+    activeMonitors.delete(id)
 
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('monitor:status-update', {
-      isRunning: false,
-      lastCheck: '-',
-      exePath: '',
-      stopped: true
-    })
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('monitor:status-update', {
+        id,
+        stopped: true,
+        lastCheck: '-',
+        status: '未監控'
+      })
+    }
   }
+}
+
+function stopAllMonitoring() {
+  activeMonitors.forEach((monitor, id) => {
+    clearInterval(monitor.timer)
+  })
+  activeMonitors.clear()
 }
 
 // ==================== 5. 應用程式啟動 ====================

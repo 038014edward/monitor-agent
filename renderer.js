@@ -1,216 +1,299 @@
-// 取得頁面元素
-const exePathInput = document.getElementById('exePath')
-const intervalInput = document.getElementById('intervalInput')
+// ==================== DOM 元素 ====================
+const newExePathInput = document.getElementById('newExePath')
+const newIntervalInput = document.getElementById('newInterval')
 const browseBtn = document.getElementById('browseBtn')
-const saveBtn = document.getElementById('saveBtn')
-const toggleMonitorBtn = document.getElementById('toggleMonitorBtn')
+const addBtn = document.getElementById('addBtn')
+const monitorList = document.getElementById('monitorList')
+const startAllBtn = document.getElementById('startAllBtn')
+const stopAllBtn = document.getElementById('stopAllBtn')
 const statusMessage = document.getElementById('statusMessage')
-const monitorStatus = document.getElementById('monitorStatus')
-const processStatus = document.getElementById('processStatus')
-const lastCheck = document.getElementById('lastCheck')
 
-// 監控狀態
-let isMonitoring = false
+// ==================== 狀態管理 ====================
+let monitors = [] // {id, exePath, interval, isMonitoring, status, lastCheck}
 
-// 顯示狀態訊息
-function showStatus(message, isSuccess = true) {
+// ==================== UI 輔助函式 ====================
+const showStatus = (message, isSuccess = true) => {
   statusMessage.textContent = message
   statusMessage.className = 'status-message ' + (isSuccess ? 'success' : 'error')
   statusMessage.style.display = 'block'
-
-  setTimeout(() => {
-    statusMessage.style.display = 'none'
-  }, 3000)
+  setTimeout(() => statusMessage.style.display = 'none', 3000)
 }
 
-// 載入預設或已保存的設定
-async function loadConfig() {
-  try {
-    const config = await window.electronAPI.getConfig()
-    if (config.exePath) {
-      exePathInput.value = config.exePath
-      toggleMonitorBtn.disabled = false
-      console.log('已載入設定:', config)
-    }
-    if (config.interval) {
-      intervalInput.value = config.interval
-    }
-  } catch (error) {
-    console.error('載入設定失敗:', error)
-  }
+const getExeFileName = (fullPath) => {
+  return fullPath.split('\\').pop().split('/').pop()
 }
 
-// 驗證檔案路徑
-async function validateFilePath(filePath) {
-  if (!filePath || filePath.trim() === '') {
-    return false
+// ==================== 渲染監控列表 ====================
+const renderMonitorList = () => {
+  if (monitors.length === 0) {
+    monitorList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-text">尚未新增任何監控項目</div>
+      </div>
+    `
+    return
   }
 
-  const exists = await window.electronAPI.checkFileExists(filePath)
-  return exists
+  monitorList.innerHTML = monitors.map(monitor => `
+    <div class="monitor-item ${monitor.isMonitoring ? 'monitoring' : ''}" data-id="${monitor.id}">
+      <div class="monitor-header">
+        <div class="monitor-path" title="${monitor.exePath}">
+          ${getExeFileName(monitor.exePath)} <span class="interval-badge">⏱️ ${monitor.interval} 秒</span>
+        </div>
+        <div class="monitor-controls">
+          <button class="item-btn toggle-btn ${monitor.isMonitoring ? 'monitoring' : ''}" data-action="toggle" data-id="${monitor.id}">
+            ${monitor.isMonitoring ? '⏹️ 停止' : '▶️ 啟動'}
+          </button>
+          <button class="item-btn delete-btn" data-action="delete" data-id="${monitor.id}" ${monitor.isMonitoring ? 'disabled' : ''}>🗑️ 刪除</button>
+        </div>
+      </div>
+      <div class="monitor-info">
+        <div class="info-item">
+          <span class="info-label">狀態:</span>
+          <span class="info-value ${monitor.status === '執行中' ? 'running' : 'stopped'}">
+            ${monitor.status || '未監控'}
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">最後檢查:</span>
+          <span class="info-value">${monitor.lastCheck || '-'}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">路徑:</span>
+          <span class="info-value" style="font-size: 10px; overflow: hidden; text-overflow: ellipsis;">${monitor.exePath}</span>
+        </div>
+      </div>
+    </div>
+  `).join('')
 }
 
-// 處理輸入框失去焦點事件（驗證檔案）
-exePathInput.addEventListener('blur', async () => {
-  const filePath = exePathInput.value.trim()
+// ==================== 監控操作 ====================
+const toggleMonitor = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (!monitor) return
 
-  if (!filePath) {
-    return // 空白時不處理
-  }
-
-  const isValid = await validateFilePath(filePath)
-
-  if (!isValid) {
-    showStatus('❌ 找不到指定的執行檔！', false)
-    exePathInput.value = '' // 清空輸入框
-    console.log('檔案不存在，已清空輸入框')
+  if (monitor.isMonitoring) {
+    await stopMonitor(id)
   } else {
-    console.log('檔案驗證成功:', filePath)
+    await startMonitor(id)
   }
-})
+}
 
-// 處理瀏覽按鈕點擊事件
-browseBtn.addEventListener('click', async () => {
-  const filePath = await window.electronAPI.openFile()
-  if (filePath) {
-    exePathInput.value = filePath
-    console.log('選擇的檔案:', filePath)
-  }
-})
-
-// 處理保存按鈕點擊事件
-saveBtn.addEventListener('click', async () => {
-  const exePath = exePathInput.value.trim()
-  const interval = parseInt(intervalInput.value) || 5
-
-  if (!exePath) {
-    showStatus('❌ 請先選擇要監控的程式！', false)
-    return
-  }
-
-  if (interval < 1 || interval > 3600) {
-    showStatus('❌ 監控間隔必須在 1-3600 秒之間！', false)
-    return
-  }
-
-  // 保存前先驗證檔案是否存在
-  const isValid = await validateFilePath(exePath)
-  if (!isValid) {
-    showStatus('❌ 找不到指定的執行檔！', false)
-    exePathInput.value = '' // 清空輸入框
-    return
-  }
+const startMonitor = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (!monitor) return
 
   try {
-    const result = await window.electronAPI.saveConfig({
-      exePath: exePath,
-      interval: interval
+    const result = await window.electronAPI.startMonitoring({
+      id: monitor.id,
+      exePath: monitor.exePath,
+      interval: monitor.interval
     })
 
     if (result.success) {
-      showStatus('✓ ' + result.message, true)
-      toggleMonitorBtn.disabled = false
-      console.log('設定已保存:', { exePath, interval })
+      monitor.isMonitoring = true
+      renderMonitorList()
+      showStatus(`✓ 已開始監控 ${getExeFileName(monitor.exePath)}`, true)
     } else {
-      showStatus('✗ ' + result.message, false)
+      showStatus(`✗ ${result.message}`, false)
     }
   } catch (error) {
-    showStatus('✗ 保存失敗：' + error.message, false)
-    console.error('保存設定錯誤:', error)
-  }
-})
-
-// UI 更新函式
-const updateMonitoringUI = (monitoring) => {
-  isMonitoring = monitoring
-  toggleMonitorBtn.textContent = monitoring ? '⏹️ 停止監控' : '▶️ 開始監控'
-  toggleMonitorBtn.classList.toggle('monitoring', monitoring)
-  exePathInput.disabled = monitoring
-  intervalInput.disabled = monitoring
-  monitorStatus.textContent = monitoring ? '監控中' : '未啟動'
-  monitorStatus.className = monitoring ? 'status-value monitoring' : 'status-value'
-
-  if (!monitoring) {
-    processStatus.textContent = '-'
-    processStatus.className = 'status-value'
-    lastCheck.textContent = '-'
+    showStatus(`✗ 啟動失敗：${error.message}`, false)
   }
 }
 
-// 驗證監控參數
-const validateMonitorParams = (exePath, interval) => {
+const stopMonitor = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (!monitor) return
+
+  try {
+    const result = await window.electronAPI.stopMonitoring(id)
+
+    if (result.success) {
+      monitor.isMonitoring = false
+      monitor.status = '未監控'
+      monitor.lastCheck = '-'
+      renderMonitorList()
+      showStatus(`✓ 已停止監控 ${getExeFileName(monitor.exePath)}`, true)
+    } else {
+      showStatus(`✗ ${result.message}`, false)
+    }
+  } catch (error) {
+    showStatus(`✗ 停止失敗：${error.message}`, false)
+  }
+}
+
+const deleteMonitor = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (!monitor) return
+
+  if (monitor.isMonitoring) {
+    showStatus('⚠️ 請先停止監控再刪除', false)
+    return
+  }
+
+  monitors = monitors.filter(m => m.id !== id)
+  await saveMonitors()
+  renderMonitorList()
+  showStatus(`✓ 已刪除 ${getExeFileName(monitor.exePath)}`, true)
+}
+
+// ==================== 資料持久化 ====================
+const saveMonitors = async () => {
+  try {
+    // 只儲存必要的檔案，不包含運行時狀態
+    const monitorsToSave = monitors.map(m => ({
+      id: m.id,
+      exePath: m.exePath,
+      interval: m.interval
+    }))
+    await window.electronAPI.saveMonitors(monitorsToSave)
+  } catch (error) {
+    console.error('保存失敗:', error)
+  }
+}
+
+const loadMonitors = async () => {
+  try {
+    const savedMonitors = await window.electronAPI.getMonitors()
+    if (savedMonitors && Array.isArray(savedMonitors)) {
+      monitors = savedMonitors.map(m => ({
+        ...m,
+        isMonitoring: false,
+        status: '未監控',
+        lastCheck: '-'
+      }))
+      renderMonitorList()
+    }
+  } catch (error) {
+    console.error('載入失敗:', error)
+  }
+}
+
+// ==================== 事件處理 ====================
+// 使用事件委派處理監控列表中的按鈕點擊
+monitorList.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action]')
+  if (!btn) return
+
+  const action = btn.dataset.action
+  const id = btn.dataset.id
+
+  if (action === 'toggle') {
+    await toggleMonitor(id)
+  } else if (action === 'delete') {
+    await deleteMonitor(id)
+  }
+})
+
+browseBtn.addEventListener('click', async () => {
+  const filePath = await window.electronAPI.openFile()
+  if (filePath) {
+    newExePathInput.value = filePath
+  }
+})
+
+addBtn.addEventListener('click', async () => {
+  const exePath = newExePathInput.value.trim()
+  const interval = parseInt(newIntervalInput.value) || 5
+
   if (!exePath) {
-    return { valid: false, message: '❌ 請先選擇要監控的程式！' }
+    showStatus('❌ 請輸入程式路徑', false)
+    return
   }
+
   if (interval < 1 || interval > 3600) {
-    return { valid: false, message: '❌ 監控間隔必須在 1-3600 秒之間！' }
+    showStatus('❌ 監控間隔必須在 1-3600 秒之間', false)
+    return
   }
-  return { valid: true }
-}
 
-// 處理監控結果
-const handleMonitorResult = (result, isStart) => {
-  if (result.success) {
-    updateMonitoringUI(isStart)
-    showStatus('✓ ' + result.message, true)
-  } else {
-    showStatus('✗ ' + result.message, false)
+  // 檢查檔案是否存在
+  const exists = await window.electronAPI.checkFileExists(exePath)
+  if (!exists) {
+    showStatus('❌ 找不到指定的執行檔', false)
+    return
   }
-}
 
-// 開始監控
-const startMonitoring = async (exePath, interval) => {
-  const validation = validateMonitorParams(exePath, interval)
-  if (!validation.valid) {
-    showStatus(validation.message, false)
+  // 檢查是否已存在
+  if (monitors.some(m => m.exePath === exePath)) {
+    showStatus('⚠️ 該程式已在監控列表中', false)
+    return
+  }
+
+  // 新增監控項目
+  const newMonitor = {
+    id: Date.now().toString(),
+    exePath,
+    interval,
+    isMonitoring: false,
+    status: '未監控',
+    lastCheck: '-'
+  }
+
+  monitors.push(newMonitor)
+  await saveMonitors()
+  renderMonitorList()
+
+  // 清空輸入
+  newExePathInput.value = ''
+  newIntervalInput.value = '5'
+
+  showStatus(`✓ 已新增 ${getExeFileName(exePath)}`, true)
+})
+
+startAllBtn.addEventListener('click', async () => {
+  const notMonitoring = monitors.filter(m => !m.isMonitoring)
+  if (notMonitoring.length === 0) {
+    showStatus('⚠️ 沒有可啟動的監控項目', false)
+    return
+  }
+
+  for (const monitor of notMonitoring) {
+    await startMonitor(monitor.id)
+  }
+})
+
+stopAllBtn.addEventListener('click', async () => {
+  const monitoring = monitors.filter(m => m.isMonitoring)
+  if (monitoring.length === 0) {
+    showStatus('⚠️ 沒有正在監控的項目', false)
     return
   }
 
   try {
-    const result = await window.electronAPI.startMonitoring({ exePath, interval })
-    handleMonitorResult(result, true)
+    const result = await window.electronAPI.stopAllMonitoring()
+    if (result.success) {
+      monitors.forEach(m => {
+        m.isMonitoring = false
+        m.status = '未監控'
+        m.lastCheck = '-'
+      })
+      renderMonitorList()
+      showStatus(`✓ 已停止所有監控 (${monitoring.length} 個)`, true)
+    } else {
+      showStatus(`✗ ${result.message}`, false)
+    }
   } catch (error) {
-    showStatus('✗ 啟動失敗：' + error.message, false)
-  }
-}
-
-// 停止監控
-const stopMonitoring = async () => {
-  try {
-    const result = await window.electronAPI.stopMonitoring()
-    handleMonitorResult(result, false)
-  } catch (error) {
-    showStatus('✗ 停止失敗：' + error.message, false)
-  }
-}
-
-// 處理切換監控按鈕
-toggleMonitorBtn.addEventListener('click', async () => {
-  if (isMonitoring) {
-    await stopMonitoring()
-  } else {
-    const exePath = exePathInput.value.trim()
-    const interval = parseInt(intervalInput.value) || 5
-    await startMonitoring(exePath, interval)
+    showStatus(`✗ 停止失敗：${error.message}`, false)
   }
 })
 
-// 監聽監控狀態更新
+// ==================== 監聽狀態更新 ====================
 window.electronAPI.onMonitorStatus((data) => {
-  if (data.stopped) {
-    return
-  }
-
-  lastCheck.textContent = data.lastCheck
-
-  if (data.isRunning) {
-    processStatus.textContent = '✓ 執行中'
-    processStatus.className = 'status-value running'
-  } else {
-    processStatus.textContent = '✗ 未執行'
-    processStatus.className = 'status-value stopped'
+  const monitor = monitors.find(m => m.id === data.id)
+  if (monitor) {
+    if (data.stopped) {
+      monitor.isMonitoring = false
+      monitor.status = '未監控'
+      monitor.lastCheck = '-'
+    } else {
+      monitor.status = data.status || (data.isRunning ? '執行中' : '未執行')
+      monitor.lastCheck = data.lastCheck
+    }
+    renderMonitorList()
   }
 })
 
-// 頁面載入時讀取設定
-loadConfig()
+// ==================== 初始化 ====================
+loadMonitors()
