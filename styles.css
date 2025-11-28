@@ -9,6 +9,10 @@
   --section-bg-color: #B8D4E3;
   --text-color: #333333;
   --body-bg-color: #E0E0E0;
+  --border-color: #C0C0C0;
+  --table-header-bg: #E8E8E8;
+  --table-row-hover: #F0F8FF;
+  --selected-row-bg: #D1E7FD;
 }
 
 * {
@@ -17,335 +21,423 @@
   padding: 0;
 }
 
-body {
-  font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
-  padding: 15px;
-  background-color: var(--body-bg-color);
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, sans-serif;
+  background-color: var(--background-color);
   color: var(--text-color);
   font-size: 13px;
 }
 
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  background-color: var(--background-color);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-h1 {
-  color: var(--secondary-color);
-  margin-bottom: 15px;
-  font-size: 20px;
-  font-weight: 600;
-  text-align: center;
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--warning-color);
-}
-
-/* 新增區域 */
-.add-section {
-  margin-bottom: 15px;
-  padding: 12px;
-  background-color: white;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-.input-row {
+/* 應用程式容器 - 滿版佈局 */
+.app-container {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
 }
 
-.compact-input {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 13px;
-  flex: 1;
+/* 標題列 */
+.app-header {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 10px 15px;
+  border-bottom: 2px solid var(--primary-color);
 }
 
-.compact-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-}
-
-.interval-input {
-  max-width: 60px;
-  flex: 0 0 60px;
-  text-align: center;
-}
-
-.interval-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.interval-icon {
+.app-header h1 {
   font-size: 16px;
-}
-
-.interval-unit {
-  font-size: 13px;
-  color: #666;
-  white-space: nowrap;
-}
-
-.compact-btn {
-  padding: 6px 12px;
-  background-color: var(--primary-color);
+  font-weight: 600;
+  margin: 0;
   color: white;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  min-width: 40px;
+  padding: 0;
+  text-align: left;
 }
 
-.compact-btn:hover {
-  background-color: #006370;
-}
-
-.add-btn {
-  padding: 6px 16px;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.add-btn:hover {
-  background-color: #45a049;
-}
-
-/* 監控列表 */
-.monitor-list {
-  margin-bottom: 15px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.monitor-item {
-  background-color: white;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  border-left: 3px solid var(--primary-color);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.monitor-item.monitoring {
-  border-left-color: var(--accent-color);
-  background-color: #f0f9ff;
-}
-
-.monitor-header {
+/* 工具列 */
+.toolbar {
+  background-color: var(--table-header-bg);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
 }
 
-.monitor-path {
-  font-weight: 600;
-  color: var(--secondary-color);
-  font-size: 12px;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-right: 10px;
-}
-
-.monitor-controls {
+.toolbar-left {
   display: flex;
   gap: 6px;
 }
 
-.item-btn {
-  padding: 4px 10px;
-  border: none;
-  border-radius: 4px;
+.toolbar-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border-color);
+  background-color: white;
   cursor: pointer;
   font-size: 12px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.toolbar-btn:hover {
+  background-color: var(--table-row-hover);
+}
+
+.toolbar-btn:active {
+  background-color: var(--selected-row-bg);
+}
+
+/* 主要內容區 (上下分割) */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* 監控列表區域 (上方) */
+.monitor-section {
+  flex: 0 0 60%;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-color);
+  min-height: 200px;
+}
+
+/* 分隔條 */
+.resizer {
+  height: 4px;
+  background-color: var(--border-color);
+  cursor: ns-resize;
+  flex-shrink: 0;
+}
+
+.resizer:hover {
+  background-color: var(--primary-color);
+}
+
+/* 日誌區域 (下方) */
+.log-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+/* 區段標題 */
+.section-header {
+  background-color: var(--section-bg-color);
+  padding: 6px 10px;
   font-weight: 600;
-  transition: all 0.2s;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.toggle-btn {
-  background-color: var(--accent-color);
-  color: white;
-  min-width: 70px;
+/* 表格容器 */
+.table-container {
+  flex: 1;
+  overflow: auto;
+  background-color: white;
 }
 
-.toggle-btn:hover {
-  background-color: #45a049;
+/* 監控表格 */
+.monitor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
 }
 
-.toggle-btn.monitoring {
-  background-color: var(--warning-color);
+.monitor-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--table-header-bg);
 }
 
-.toggle-btn.monitoring:hover {
-  background-color: #e68900;
+.monitor-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  background-color: var(--table-header-bg);
 }
 
-.interval-badge {
-  background-color: #e3f2fd;
-  color: var(--secondary-color);
-  padding: 2px 6px;
+.monitor-table th:last-child {
+  border-right: none;
+}
+
+.monitor-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.monitor-table tbody tr:hover {
+  background-color: var(--table-row-hover);
+}
+
+.monitor-table tbody tr.selected {
+  background-color: var(--selected-row-bg);
+}
+
+.monitor-table tbody tr.monitoring {
+  background-color: #E8F5E9;
+}
+
+.monitor-table td {
+  padding: 8px 10px;
+  border-right: 1px solid #E8E8E8;
+}
+
+.monitor-table td:last-child {
+  border-right: none;
+}
+
+/* 狀態標籤 */
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
-  margin-left: 6px;
 }
 
-.delete-btn {
+.status-badge.running {
+  background-color: #C8E6C9;
+  color: #2E7D32;
+}
+
+.status-badge.stopped {
+  background-color: #FFCCBC;
+  color: #D84315;
+}
+
+.status-badge.not-monitoring {
+  background-color: #E0E0E0;
+  color: #616161;
+}
+
+/* 操作按鈕 */
+.action-btn {
+  padding: 3px 8px;
+  margin: 0 2px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  cursor: pointer;
+  font-size: 11px;
+  border-radius: 3px;
+}
+
+.action-btn:hover {
+  background-color: var(--table-row-hover);
+}
+
+.action-btn.start {
+  color: var(--accent-color);
+}
+
+.action-btn.stop {
+  color: var(--warning-color);
+}
+
+.action-btn.delete {
+  color: var(--danger-color);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 日誌容器 */
+.log-container {
+  flex: 1;
+  overflow: auto;
+  background-color: #FAFAFA;
+  padding: 10px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.log-empty {
+  color: #999;
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 12px;
+}
+
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px solid #F0F0F0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.clear-log-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.clear-log-btn:hover {
+  background-color: var(--table-row-hover);
+}
+
+/* 狀態提示訊息 */
+.status-message {
+  display: none;
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.status-message.success {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.status-message.error {
   background-color: var(--danger-color);
   color: white;
 }
 
-.delete-btn:hover {
-  background-color: #d32f2f;
-}
-
-.monitor-info {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  font-size: 11px;
-  color: #666;
-}
-
-.info-item {
+/* 對話框 */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.info-label {
-  font-weight: 600;
-}
-
-.info-value {
-  color: var(--text-color);
-}
-
-.info-value.running {
-  color: var(--accent-color);
-  font-weight: 600;
-}
-
-.info-value.stopped {
-  color: var(--danger-color);
-  font-weight: 600;
-}
-
-/* 全域控制 */
-.global-controls {
-  display: flex;
-  gap: 10px;
   justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background-color: white;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-header {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 12px 15px;
+  font-weight: 600;
+  border-radius: 6px 6px 0 0;
+}
+
+.dialog-body {
+  padding: 20px 15px;
+}
+
+.form-group {
   margin-bottom: 15px;
 }
 
-.control-btn {
-  padding: 8px 20px;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 6px;
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.dialog-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.input-with-btn {
+  display: flex;
+  gap: 6px;
+}
+
+.input-with-btn .dialog-input {
+  flex: 1;
+}
+
+.browse-btn {
+  padding: 6px 15px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.browse-btn:hover {
+  background-color: var(--table-row-hover);
+}
+
+.dialog-footer {
+  padding: 12px 15px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-btn {
+  padding: 6px 20px;
+  border: 1px solid var(--border-color);
+  background-color: white;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
-  flex: 1;
-  max-width: 200px;
+  border-radius: 3px;
 }
 
-.control-btn:hover {
-  background-color: #006370;
+.dialog-btn:hover {
+  background-color: var(--table-row-hover);
 }
 
-/* 狀態訊息 - Toast 樣式（固定在頂部） */
-.status-message {
-  display: none;
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 300px;
-  max-width: 500px;
-  padding: 12px 20px;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 13px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  animation: slideDown 0.3s ease-out;
+.dialog-btn.primary {
+  background-color: var(--secondary-color);
+  color: white;
+  border-color: var(--secondary-color);
 }
 
-.status-message.success {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid var(--accent-color);
-}
-
-.status-message.error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -20px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-/* 滾動條樣式 */
-.monitor-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.monitor-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.monitor-list::-webkit-scrollbar-thumb {
-  background: var(--primary-color);
-  border-radius: 4px;
-}
-
-.monitor-list::-webkit-scrollbar-thumb:hover {
-  background: #006370;
-}
-
-/* 空狀態 */
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #999;
-}
-
-.empty-state-icon {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.empty-state-text {
-  font-size: 14px;
+.dialog-btn.primary:hover {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }

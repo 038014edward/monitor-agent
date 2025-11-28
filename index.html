@@ -11,35 +11,84 @@
 </head>
 
 <body>
-  <!-- 狀態提示訊息（固定在頂部） -->
+  <!-- 狀態提示訊息 -->
   <div id="statusMessage" class="status-message"></div>
 
-  <div class="container">
-    <h1>服務監控代理程式</h1>
+  <div class="app-container">
+    <!-- 標題列 -->
+    <header class="app-header">
+      <h1>服務監控代理程式</h1>
+    </header>
 
-    <!-- 新增監控項目區 -->
-    <div class="add-section">
-      <div class="input-row">
-        <input type="text" id="newExePath" placeholder="程式路徑..." class="compact-input">
-        <button id="browseBtn" class="compact-btn">📁</button>
-        <span class="interval-wrapper">
-          <span class="interval-icon">⏱️</span>
-          <input type="number" id="newInterval" min="1" max="3600" value="5" placeholder="5"
-            class="compact-input interval-input">
-          <span class="interval-unit">秒</span>
-        </span>
-        <button id="addBtn" class="add-btn">➕ 新增</button>
+    <!-- 工具列 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button id="addBtn" class="toolbar-btn">➕ 新增監控</button>
+        <button id="startAllBtn" class="toolbar-btn">▶️ 全部開始</button>
+        <button id="stopAllBtn" class="toolbar-btn">⏹️ 全部停止</button>
       </div>
     </div>
 
-    <!-- 監控列表 -->
-    <div class="monitor-list" id="monitorList">
-      <!-- 動態生成的監控項目 -->
-    </div>
+    <!-- 主要內容區 (上下分割) -->
+    <div class="main-content">
+      <!-- 上方：監控列表 (表格) -->
+      <div class="monitor-section">
+        <div class="section-header">監控列表</div>
+        <div class="table-container">
+          <table class="monitor-table">
+            <thead>
+              <tr>
+                <th style="width: 35%">程式名稱</th>
+                <th style="width: 20%">狀態</th>
+                <th style="width: 20%">最後檢查</th>
+                <th style="width: 15%">間隔(秒)</th>
+                <th style="width: 10%">操作</th>
+              </tr>
+            </thead>
+            <tbody id="monitorTableBody">
+              <!-- 動態生成的監控項目 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    <div class="global-controls">
-      <button id="startAllBtn" class="control-btn">▶️ 全部開始</button>
-      <button id="stopAllBtn" class="control-btn">⏹️ 全部停止</button>
+      <!-- 分隔條 -->
+      <div class="resizer"></div>
+
+      <!-- 下方：日誌區域 -->
+      <div class="log-section">
+        <div class="section-header">
+          <span>活動日誌</span>
+          <button id="clearLogBtn" class="clear-log-btn">清除</button>
+        </div>
+        <div class="log-container" id="logContainer">
+          <div class="log-empty">選擇一個監控項目以查看其日誌</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增監控對話框 (隱藏) -->
+  <div id="addDialog" class="dialog-overlay" style="display: none;">
+    <div class="dialog">
+      <div class="dialog-header">新增監控項目</div>
+      <div class="dialog-body">
+        <div class="form-group">
+          <label>程式路徑:</label>
+          <div class="input-with-btn">
+            <input type="text" id="newExePath" placeholder="請選擇執行檔..." class="dialog-input">
+            <button id="browseBtn" class="browse-btn">瀏覽...</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>監控間隔 (秒):</label>
+          <input type="number" id="newInterval" min="1" max="3600" value="5" class="dialog-input">
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button id="confirmAddBtn" class="dialog-btn primary">確定</button>
+        <button id="cancelAddBtn" class="dialog-btn">取消</button>
+      </div>
     </div>
   </div>
 

@@ -110,8 +110,10 @@ app.on('second-instance', () => {
 // ==================== 2. 建立主視窗 ====================
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1000,
+    height: 700,
+    minWidth: 800,
+    minHeight: 600,
     icon: path.join(__dirname, 'assets/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
@@ -225,6 +227,27 @@ function setupIPC() {
       return { success: true, message: '所有監控已停止' }
     } catch (error) {
       return { success: false, message: '停止所有監控失敗：' + error.message }
+    }
+  })
+
+  // 讀取監控日誌
+  ipcMain.handle('log:getMonitorLog', async (event, exePath) => {
+    try {
+      const programName = getProgramName(exePath)
+      const dateString = getTodayDateString()
+      const logFileName = `${programName}_${dateString}.log`
+      const logFilePath = path.join(logsDir, logFileName)
+
+      if (fs.existsSync(logFilePath)) {
+        const content = fs.readFileSync(logFilePath, 'utf8')
+        // 分割成行並過濾空行
+        const lines = content.split('\n').filter(line => line.trim())
+        return lines
+      }
+      return []
+    } catch (error) {
+      console.error('讀取日誌失敗:', error)
+      return []
     }
   })
 }

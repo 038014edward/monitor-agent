@@ -1,15 +1,27 @@
 // ==================== DOM 元素 ====================
+const monitorTableBody = document.getElementById('monitorTableBody')
+const logContainer = document.getElementById('logContainer')
+const statusMessage = document.getElementById('statusMessage')
+const addDialog = document.getElementById('addDialog')
+
+// 工具列按鈕
+const addBtn = document.getElementById('addBtn')
+const startAllBtn = document.getElementById('startAllBtn')
+const stopAllBtn = document.getElementById('stopAllBtn')
+
+// 對話框元素
 const newExePathInput = document.getElementById('newExePath')
 const newIntervalInput = document.getElementById('newInterval')
 const browseBtn = document.getElementById('browseBtn')
-const addBtn = document.getElementById('addBtn')
-const monitorList = document.getElementById('monitorList')
-const startAllBtn = document.getElementById('startAllBtn')
-const stopAllBtn = document.getElementById('stopAllBtn')
-const statusMessage = document.getElementById('statusMessage')
+const confirmAddBtn = document.getElementById('confirmAddBtn')
+const cancelAddBtn = document.getElementById('cancelAddBtn')
+
+// 日誌按鈕
+const clearLogBtn = document.getElementById('clearLogBtn')
 
 // ==================== 狀態管理 ====================
-let monitors = [] // {id, exePath, interval, isMonitoring, status, lastCheck}
+let monitors = []
+let selectedMonitorId = null
 
 // ==================== UI 輔助函式 ====================
 const showStatus = (message, isSuccess = true) => {
@@ -23,49 +35,154 @@ const getExeFileName = (fullPath) => {
   return fullPath.split('\\').pop().split('/').pop()
 }
 
-// ==================== 渲染監控列表 ====================
-const renderMonitorList = () => {
+// 安全地建立 HTML 元素的輔助函式
+const createElement = (tag, options = {}) => {
+  const element = document.createElement(tag)
+  if (options.className) element.className = options.className
+  if (options.textContent) element.textContent = options.textContent
+  if (options.title) element.title = options.title
+  if (options.dataset) {
+    Object.entries(options.dataset).forEach(([key, value]) => {
+      element.dataset[key] = value
+    })
+  }
+  if (options.style) {
+    Object.entries(options.style).forEach(([key, value]) => {
+      element.style[key] = value
+    })
+  }
+  if (options.disabled !== undefined) element.disabled = options.disabled
+  if (options.children) {
+    options.children.forEach(child => element.appendChild(child))
+  }
+  return element
+}
+
+// ==================== 渲染監控表格 ====================
+const renderMonitorTable = () => {
+  monitorTableBody.innerHTML = ''
+
   if (monitors.length === 0) {
-    monitorList.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📋</div>
-        <div class="empty-state-text">尚未新增任何監控項目</div>
-      </div>
-    `
+    const row = createElement('tr', {
+      children: [
+        createElement('td', {
+          textContent: '尚未新增任何監控項目',
+          style: { textAlign: 'center', padding: '40px', color: '#999' }
+        })
+      ]
+    })
+    row.children[0].colSpan = 5
+    monitorTableBody.appendChild(row)
     return
   }
 
-  monitorList.innerHTML = monitors.map(monitor => `
-    <div class="monitor-item ${monitor.isMonitoring ? 'monitoring' : ''}" data-id="${monitor.id}">
-      <div class="monitor-header">
-        <div class="monitor-path" title="${monitor.exePath}">
-          ${getExeFileName(monitor.exePath)} <span class="interval-badge">⏱️ ${monitor.interval} 秒</span>
-        </div>
-        <div class="monitor-controls">
-          <button class="item-btn toggle-btn ${monitor.isMonitoring ? 'monitoring' : ''}" data-action="toggle" data-id="${monitor.id}">
-            ${monitor.isMonitoring ? '⏹️ 停止' : '▶️ 啟動'}
-          </button>
-          <button class="item-btn delete-btn" data-action="delete" data-id="${monitor.id}" ${monitor.isMonitoring ? 'disabled' : ''}>🗑️ 刪除</button>
-        </div>
-      </div>
-      <div class="monitor-info">
-        <div class="info-item">
-          <span class="info-label">狀態:</span>
-          <span class="info-value ${monitor.status === '執行中' ? 'running' : 'stopped'}">
-            ${monitor.status || '未監控'}
-          </span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">最後檢查:</span>
-          <span class="info-value">${monitor.lastCheck || '-'}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">路徑:</span>
-          <span class="info-value" style="font-size: 10px; overflow: hidden; text-overflow: ellipsis;">${monitor.exePath}</span>
-        </div>
-      </div>
-    </div>
-  `).join('')
+  monitors.forEach(monitor => {
+    // 狀態標籤
+    let statusClass = 'not-monitoring'
+    if (monitor.isMonitoring) {
+      statusClass = monitor.status === '執行中' ? 'running' : 'stopped'
+    }
+
+    const statusBadge = createElement('span', {
+      className: `status-badge ${statusClass}`,
+      textContent: monitor.status || '未監控'
+    })
+
+    // 操作按鈕容器
+    const actionButtons = createElement('div', { style: { whiteSpace: 'nowrap' } })
+
+    const toggleBtn = createElement('button', {
+      className: `action-btn ${monitor.isMonitoring ? 'stop' : 'start'}`,
+      textContent: monitor.isMonitoring ? '停止' : '啟動',
+      dataset: { action: 'toggle', id: monitor.id }
+    })
+
+    const deleteBtn = createElement('button', {
+      className: 'action-btn delete',
+      textContent: '刪除',
+      dataset: { action: 'delete', id: monitor.id },
+      disabled: monitor.isMonitoring
+    })
+
+    actionButtons.appendChild(toggleBtn)
+    actionButtons.appendChild(deleteBtn)
+
+    // 建立表格列
+    const row = createElement('tr', {
+      dataset: { id: monitor.id },
+      className: monitor.isMonitoring ? 'monitoring' : ''
+    })
+
+    if (selectedMonitorId === monitor.id) {
+      row.classList.add('selected')
+    }
+
+    row.appendChild(createElement('td', {
+      textContent: getExeFileName(monitor.exePath),
+      title: monitor.exePath
+    }))
+
+    const statusCell = createElement('td')
+    statusCell.appendChild(statusBadge)
+    row.appendChild(statusCell)
+
+    row.appendChild(createElement('td', {
+      textContent: monitor.lastCheck || '-'
+    }))
+
+    row.appendChild(createElement('td', {
+      textContent: monitor.interval.toString()
+    }))
+
+    const actionCell = createElement('td')
+    actionCell.appendChild(actionButtons)
+    row.appendChild(actionCell)
+
+    // 點擊列選擇監控項目
+    row.addEventListener('click', (e) => {
+      if (!e.target.closest('button')) {
+        selectMonitor(monitor.id)
+      }
+    })
+
+    monitorTableBody.appendChild(row)
+  })
+}
+
+// ==================== 選擇監控項目 ====================
+const selectMonitor = (id) => {
+  selectedMonitorId = id
+  renderMonitorTable()
+  loadMonitorLog(id)
+}
+
+// ==================== 載入日誌 ====================
+const loadMonitorLog = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (!monitor) {
+    logContainer.innerHTML = '<div class="log-empty">選擇一個監控項目以查看其日誌</div>'
+    return
+  }
+
+  try {
+    const logs = await window.electronAPI.getMonitorLog(monitor.exePath)
+    if (logs && logs.length > 0) {
+      logContainer.innerHTML = ''
+      logs.forEach(logLine => {
+        const entry = createElement('div', {
+          className: 'log-entry',
+          textContent: logLine
+        })
+        logContainer.appendChild(entry)
+      })
+      // 自動捲動到底部
+      logContainer.scrollTop = logContainer.scrollHeight
+    } else {
+      logContainer.innerHTML = '<div class="log-empty">暫無日誌記錄</div>'
+    }
+  } catch (error) {
+    logContainer.innerHTML = `<div class="log-empty">載入日誌失敗: ${error.message}</div>`
+  }
 }
 
 // ==================== 監控操作 ====================
@@ -84,7 +201,6 @@ const startMonitor = async (id) => {
   const monitor = monitors.find(m => m.id === id)
   if (!monitor) return
 
-  // 檢查檔案是否存在
   const exists = await window.electronAPI.checkFileExists(monitor.exePath)
   if (!exists) {
     showStatus(`❌ 執行檔不存在：${getExeFileName(monitor.exePath)}`, false)
@@ -100,7 +216,7 @@ const startMonitor = async (id) => {
 
     if (result.success) {
       monitor.isMonitoring = true
-      renderMonitorList()
+      renderMonitorTable()
       showStatus(`✓ 已開始監控 ${getExeFileName(monitor.exePath)}`, true)
     } else {
       showStatus(`✗ ${result.message}`, false)
@@ -121,7 +237,7 @@ const stopMonitor = async (id) => {
       monitor.isMonitoring = false
       monitor.status = '未監控'
       monitor.lastCheck = '-'
-      renderMonitorList()
+      renderMonitorTable()
       showStatus(`✓ 已停止監控 ${getExeFileName(monitor.exePath)}`, true)
     } else {
       showStatus(`✗ ${result.message}`, false)
@@ -141,15 +257,20 @@ const deleteMonitor = async (id) => {
   }
 
   monitors = monitors.filter(m => m.id !== id)
+
+  if (selectedMonitorId === id) {
+    selectedMonitorId = null
+    logContainer.innerHTML = '<div class="log-empty">選擇一個監控項目以查看其日誌</div>'
+  }
+
   await saveMonitors()
-  renderMonitorList()
+  renderMonitorTable()
   showStatus(`✓ 已刪除 ${getExeFileName(monitor.exePath)}`, true)
 }
 
 // ==================== 資料持久化 ====================
 const saveMonitors = async () => {
   try {
-    // 只儲存必要的檔案，不包含運行時狀態
     const monitorsToSave = monitors.map(m => ({
       id: m.id,
       exePath: m.exePath,
@@ -171,19 +292,31 @@ const loadMonitors = async () => {
         status: '未監控',
         lastCheck: '-'
       }))
-      renderMonitorList()
+      renderMonitorTable()
     }
   } catch (error) {
     console.error('載入失敗:', error)
   }
 }
 
+// ==================== 對話框控制 ====================
+const showAddDialog = () => {
+  newExePathInput.value = ''
+  newIntervalInput.value = '5'
+  addDialog.style.display = 'flex'
+}
+
+const hideAddDialog = () => {
+  addDialog.style.display = 'none'
+}
+
 // ==================== 事件處理 ====================
-// 使用事件委派處理監控列表中的按鈕點擊
-monitorList.addEventListener('click', async (e) => {
+// 表格中的按鈕點擊
+monitorTableBody.addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-action]')
   if (!btn) return
 
+  e.stopPropagation()
   const action = btn.dataset.action
   const id = btn.dataset.id
 
@@ -194,66 +327,8 @@ monitorList.addEventListener('click', async (e) => {
   }
 })
 
-browseBtn.addEventListener('click', async () => {
-  const filePath = await window.electronAPI.openFile()
-  if (filePath) {
-    newExePathInput.value = filePath
-  }
-})
-
-addBtn.addEventListener('click', async () => {
-  const exePath = newExePathInput.value.trim()
-  const interval = parseInt(newIntervalInput.value) || 5
-
-  // 檢查監控項目數量限制
-  if (monitors.length >= 5) {
-    showStatus('⚠️ 最多只能新增 5 個監控項目', false)
-    return
-  }
-
-  if (!exePath) {
-    showStatus('❌ 請輸入程式路徑', false)
-    return
-  }
-
-  if (interval < 1 || interval > 3600) {
-    showStatus('❌ 監控間隔必須在 1-3600 秒之間', false)
-    return
-  }
-
-  // 檢查檔案是否存在
-  const exists = await window.electronAPI.checkFileExists(exePath)
-  if (!exists) {
-    showStatus('❌ 找不到指定的執行檔', false)
-    return
-  }
-
-  // 檢查是否已存在
-  if (monitors.some(m => m.exePath === exePath)) {
-    showStatus('⚠️ 該程式已在監控列表中', false)
-    return
-  }
-
-  // 新增監控項目
-  const newMonitor = {
-    id: Date.now().toString(),
-    exePath,
-    interval,
-    isMonitoring: false,
-    status: '未監控',
-    lastCheck: '-'
-  }
-
-  monitors.push(newMonitor)
-  await saveMonitors()
-  renderMonitorList()
-
-  // 清空輸入
-  newExePathInput.value = ''
-  newIntervalInput.value = '5'
-
-  showStatus(`✓ 已新增 ${getExeFileName(exePath)}`, true)
-})
+// 工具列按鈕
+addBtn.addEventListener('click', showAddDialog)
 
 startAllBtn.addEventListener('click', async () => {
   const notMonitoring = monitors.filter(m => !m.isMonitoring)
@@ -282,13 +357,83 @@ stopAllBtn.addEventListener('click', async () => {
         m.status = '未監控'
         m.lastCheck = '-'
       })
-      renderMonitorList()
+      renderMonitorTable()
       showStatus(`✓ 已停止所有監控 (${monitoring.length} 個)`, true)
     } else {
       showStatus(`✗ ${result.message}`, false)
     }
   } catch (error) {
     showStatus(`✗ 停止失敗：${error.message}`, false)
+  }
+})
+
+// 對話框按鈕
+browseBtn.addEventListener('click', async () => {
+  const filePath = await window.electronAPI.openFile()
+  if (filePath) {
+    newExePathInput.value = filePath
+  }
+})
+
+confirmAddBtn.addEventListener('click', async () => {
+  const exePath = newExePathInput.value.trim()
+  const interval = parseInt(newIntervalInput.value) || 5
+
+  if (monitors.length >= 5) {
+    showStatus('⚠️ 最多只能新增 5 個監控項目', false)
+    return
+  }
+
+  if (!exePath) {
+    showStatus('❌ 請輸入程式路徑', false)
+    return
+  }
+
+  if (interval < 1 || interval > 3600) {
+    showStatus('❌ 監控間隔必須在 1-3600 秒之間', false)
+    return
+  }
+
+  const exists = await window.electronAPI.checkFileExists(exePath)
+  if (!exists) {
+    showStatus('❌ 找不到指定的執行檔', false)
+    return
+  }
+
+  if (monitors.some(m => m.exePath === exePath)) {
+    showStatus('⚠️ 該程式已在監控列表中', false)
+    return
+  }
+
+  const newMonitor = {
+    id: Date.now().toString(),
+    exePath,
+    interval,
+    isMonitoring: false,
+    status: '未監控',
+    lastCheck: '-'
+  }
+
+  monitors.push(newMonitor)
+  await saveMonitors()
+  renderMonitorTable()
+  hideAddDialog()
+  showStatus(`✓ 已新增 ${getExeFileName(exePath)}`, true)
+})
+
+cancelAddBtn.addEventListener('click', hideAddDialog)
+
+// 點擊對話框外部關閉
+addDialog.addEventListener('click', (e) => {
+  if (e.target === addDialog) {
+    hideAddDialog()
+  }
+})
+
+// 清除日誌
+clearLogBtn.addEventListener('click', () => {
+  if (selectedMonitorId) {
+    logContainer.innerHTML = '<div class="log-empty">日誌已清除</div>'
   }
 })
 
@@ -304,7 +449,12 @@ window.electronAPI.onMonitorStatus((data) => {
       monitor.status = data.status || (data.isRunning ? '執行中' : '未執行')
       monitor.lastCheck = data.lastCheck
     }
-    renderMonitorList()
+    renderMonitorTable()
+
+    // 如果是選中的監控項目，重新載入日誌
+    if (selectedMonitorId === monitor.id) {
+      loadMonitorLog(monitor.id)
+    }
   }
 })
 

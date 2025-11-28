@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopMonitoring: (id) => ipcRenderer.invoke('monitor:stop', id),
   stopAllMonitoring: () => ipcRenderer.invoke('monitor:stopAll'),
 
+  // 日誌相關功能
+  getMonitorLog: (exePath) => ipcRenderer.invoke('log:getMonitorLog', exePath),
+
   // 監聽監控狀態更新
   onMonitorStatus: (callback) => {
     ipcRenderer.on('monitor:status-update', (event, data) => callback(data))
