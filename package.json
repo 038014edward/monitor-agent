@@ -6,9 +6,11 @@
   "scripts": {
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "clean": "rimraf out",
+    "clean": "rimraf out node_modules/.cache",
+    "clean:full": "rimraf out node_modules/.cache && node -e \"const fs=require('fs'); const path=require('path'); const cacheDir=path.join(process.env.LOCALAPPDATA||process.env.HOME, 'electron', 'Cache'); try{fs.rmSync(cacheDir, {recursive:true, force:true})}catch(e){}\"",
     "package": "npm run clean && electron-forge package",
-    "make": "npm run clean && electron-forge make"
+    "make": "npm run clean && electron-forge make",
+    "make:full": "npm run clean:full && electron-forge make"
   },
   "keywords": [],
   "author": "CMUBH",
