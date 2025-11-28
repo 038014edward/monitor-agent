@@ -84,6 +84,13 @@ const startMonitor = async (id) => {
   const monitor = monitors.find(m => m.id === id)
   if (!monitor) return
 
+  // 檢查檔案是否存在
+  const exists = await window.electronAPI.checkFileExists(monitor.exePath)
+  if (!exists) {
+    showStatus(`❌ 執行檔不存在：${getExeFileName(monitor.exePath)}`, false)
+    return
+  }
+
   try {
     const result = await window.electronAPI.startMonitoring({
       id: monitor.id,
@@ -197,6 +204,12 @@ browseBtn.addEventListener('click', async () => {
 addBtn.addEventListener('click', async () => {
   const exePath = newExePathInput.value.trim()
   const interval = parseInt(newIntervalInput.value) || 5
+
+  // 檢查監控項目數量限制
+  if (monitors.length >= 5) {
+    showStatus('⚠️ 最多只能新增 5 個監控項目', false)
+    return
+  }
 
   if (!exePath) {
     showStatus('❌ 請輸入程式路徑', false)

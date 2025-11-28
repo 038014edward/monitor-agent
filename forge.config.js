@@ -15,8 +15,6 @@ module.exports = {
         name: 'ServiceMonitorAgent',
         authors: 'CMUBH',
         description: 'A service agent monitoring application',
-        // iconUrl: 'file://' + require('pa/th').resolve(__dirname, 'tray-icon.ico'),
-        // setupIcon: './assets/icon.ico',
       },
     },
     {

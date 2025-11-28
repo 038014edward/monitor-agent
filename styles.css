@@ -273,15 +273,22 @@ h1 {
   background-color: #006370;
 }
 
-/* 狀態訊息 */
+/* 狀態訊息 - Toast 樣式（固定在頂部） */
 .status-message {
   display: none;
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 4px;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 300px;
+  max-width: 500px;
+  padding: 12px 20px;
+  border-radius: 6px;
   text-align: center;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
   animation: slideDown 0.3s ease-out;
 }
 
@@ -300,11 +307,11 @@ h1 {
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translate(-50%, -20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, 0);
   }
 }
 
