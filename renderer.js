@@ -120,67 +120,78 @@ saveBtn.addEventListener('click', async () => {
   }
 })
 
+// UI 更新函式
+const updateMonitoringUI = (monitoring) => {
+  isMonitoring = monitoring
+  toggleMonitorBtn.textContent = monitoring ? '⏹️ 停止監控' : '▶️ 開始監控'
+  toggleMonitorBtn.classList.toggle('monitoring', monitoring)
+  exePathInput.disabled = monitoring
+  intervalInput.disabled = monitoring
+  monitorStatus.textContent = monitoring ? '監控中' : '未啟動'
+  monitorStatus.className = monitoring ? 'status-value monitoring' : 'status-value'
+
+  if (!monitoring) {
+    processStatus.textContent = '-'
+    processStatus.className = 'status-value'
+    lastCheck.textContent = '-'
+  }
+}
+
+// 驗證監控參數
+const validateMonitorParams = (exePath, interval) => {
+  if (!exePath) {
+    return { valid: false, message: '❌ 請先選擇要監控的程式！' }
+  }
+  if (interval < 1 || interval > 3600) {
+    return { valid: false, message: '❌ 監控間隔必須在 1-3600 秒之間！' }
+  }
+  return { valid: true }
+}
+
+// 處理監控結果
+const handleMonitorResult = (result, isStart) => {
+  if (result.success) {
+    updateMonitoringUI(isStart)
+    showStatus('✓ ' + result.message, true)
+  } else {
+    showStatus('✗ ' + result.message, false)
+  }
+}
+
+// 開始監控
+const startMonitoring = async (exePath, interval) => {
+  const validation = validateMonitorParams(exePath, interval)
+  if (!validation.valid) {
+    showStatus(validation.message, false)
+    return
+  }
+
+  try {
+    const result = await window.electronAPI.startMonitoring({ exePath, interval })
+    handleMonitorResult(result, true)
+  } catch (error) {
+    showStatus('✗ 啟動失敗：' + error.message, false)
+  }
+}
+
+// 停止監控
+const stopMonitoring = async () => {
+  try {
+    const result = await window.electronAPI.stopMonitoring()
+    handleMonitorResult(result, false)
+  } catch (error) {
+    showStatus('✗ 停止失敗：' + error.message, false)
+  }
+}
+
 // 處理切換監控按鈕
 toggleMonitorBtn.addEventListener('click', async () => {
   if (isMonitoring) {
-    // 停止監控
-    try {
-      const result = await window.electronAPI.stopMonitoring()
-
-      if (result.success) {
-        isMonitoring = false
-        toggleMonitorBtn.textContent = '▶️ 開始監控'
-        toggleMonitorBtn.classList.remove('monitoring')
-        exePathInput.disabled = false
-        intervalInput.disabled = false
-        monitorStatus.textContent = '未啟動'
-        monitorStatus.className = 'status-value'
-        processStatus.textContent = '-'
-        processStatus.className = 'status-value'
-        lastCheck.textContent = '-'
-        showStatus('✓ ' + result.message, true)
-      } else {
-        showStatus('✗ ' + result.message, false)
-      }
-    } catch (error) {
-      showStatus('✗ 停止失敗：' + error.message, false)
-    }
+    await stopMonitoring()
   } else {
-    // 開始監控
     const exePath = exePathInput.value.trim()
     const interval = parseInt(intervalInput.value) || 5
-
-    if (!exePath) {
-      showStatus('❌ 請先選擇要監控的程式！', false)
-      return
-    }
-
-    if (interval < 1 || interval > 3600) {
-      showStatus('❌ 監控間隔必須在 1-3600 秒之間！', false)
-      return
-    }
-
-    try {
-      const result = await window.electronAPI.startMonitoring({
-        exePath,
-        interval
-      })
-
-      if (result.success) {
-        isMonitoring = true
-        toggleMonitorBtn.textContent = '⏹️ 停止監控'
-        toggleMonitorBtn.classList.add('monitoring')
-        exePathInput.disabled = true
-        intervalInput.disabled = true
-        monitorStatus.textContent = '監控中'
-        monitorStatus.className = 'status-value monitoring'
-        showStatus('✓ ' + result.message, true)
-      } else {
-        showStatus('✗ ' + result.message, false)
-      }
-    } catch (error) {
-      showStatus('✗ 啟動失敗：' + error.message, false)
-    }
+    await startMonitoring(exePath, interval)
   }
 })
 
