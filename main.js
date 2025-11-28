@@ -12,6 +12,84 @@ let mainWindow = null
 let tray = null
 // 使用 Map 來管理多個監控項目: id -> {exePath, interval, timer}
 const activeMonitors = new Map()
+// 日誌目錄路徑
+const logsDir = path.join(app.getPath('userData'), 'logs')
+
+// ==================== 日誌功能 ====================
+// 確保日誌目錄存在
+function ensureLogsDirExists() {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true })
+  }
+}
+
+// 取得今天的日期字串 (YYYY-MM-DD)
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 取得程式名稱（不含副檔名）
+function getProgramName(exePath) {
+  const fileName = path.basename(exePath)
+  return fileName.replace(/\.[^/.]+$/, '') // 移除副檔名
+}
+
+// 寫入日誌到特定程式的日誌檔案
+function writeLog(exePath, message) {
+  ensureLogsDirExists()
+
+  const programName = getProgramName(exePath)
+  const dateString = getTodayDateString()
+  const logFileName = `${programName}_${dateString}.log`
+  const logFilePath = path.join(logsDir, logFileName)
+
+  const timestamp = new Date().toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  const logMessage = `[${timestamp}] ${message}\n`
+
+  try {
+    fs.appendFileSync(logFilePath, logMessage, 'utf8')
+  } catch (error) {
+    console.error('寫入日誌失敗:', error)
+  }
+}
+
+// 寫入系統日誌（應用程式啟動/關閉等）
+function writeSystemLog(message) {
+  ensureLogsDirExists()
+
+  const dateString = getTodayDateString()
+  const logFileName = `system_${dateString}.log`
+  const logFilePath = path.join(logsDir, logFileName)
+
+  const timestamp = new Date().toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  const logMessage = `[${timestamp}] ${message}\n`
+
+  try {
+    fs.appendFileSync(logFilePath, logMessage, 'utf8')
+  } catch (error) {
+    console.error('寫入日誌失敗:', error)
+  }
+}
 
 // ==================== 1. 限制單一實例 ====================
 const gotTheLock = app.requestSingleInstanceLock()
@@ -176,9 +254,21 @@ function startProcessMonitoring(id, exePath, interval) {
     stopProcessMonitoring(id)
   }
 
+  const exeName = path.basename(exePath)
+  writeLog(exePath, `啟動監控 (間隔: ${interval}秒)`)
+
   const checkAndNotify = async () => {
     const isRunning = await checkProcessRunning(exePath)
     const now = new Date().toLocaleTimeString('zh-TW')
+    const exeName = path.basename(exePath)
+    const status = isRunning ? '執行中' : '未執行'
+
+    // 記錄狀態變化
+    const monitor = activeMonitors.get(id)
+    if (monitor && monitor.lastStatus !== status) {
+      writeLog(exePath, `狀態變更: ${status}`)
+      monitor.lastStatus = status
+    }
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('monitor:status-update', {
@@ -196,15 +286,15 @@ function startProcessMonitoring(id, exePath, interval) {
   // 設定定時檢查
   const timer = setInterval(checkAndNotify, interval * 1000)
 
-  // 儲存監控資訊
-  activeMonitors.set(id, { exePath, interval, timer })
-}
-
-function stopProcessMonitoring(id) {
+  // 儲存監控資訊（加入 lastStatus 追蹤狀態變化）
+  activeMonitors.set(id, { exePath, interval, timer, lastStatus: null })
+} function stopProcessMonitoring(id) {
   const monitor = activeMonitors.get(id)
   if (monitor) {
     clearInterval(monitor.timer)
     activeMonitors.delete(id)
+
+    writeLog(monitor.exePath, '停止監控')
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('monitor:status-update', {
@@ -218,14 +308,20 @@ function stopProcessMonitoring(id) {
 }
 
 function stopAllMonitoring() {
+  const count = activeMonitors.size
   activeMonitors.forEach((monitor, id) => {
     clearInterval(monitor.timer)
   })
   activeMonitors.clear()
+
+  if (count > 0) {
+    writeSystemLog(`停止所有監控 (${count} 個項目)`)
+  }
 }
 
 // ==================== 5. 應用程式啟動 ====================
 app.whenReady().then(() => {
+  writeSystemLog('========== 應用程式啟動 ==========')
   createApplicationMenu()  // 建立應用程式選單
   setupIPC()
   createWindow()
@@ -241,4 +337,9 @@ app.whenReady().then(() => {
 // 關閉所有視窗時不退出(因為有系統托盤)
 app.on('window-all-closed', (e) => {
   e.preventDefault()
+})
+
+// 應用程式退出時記錄
+app.on('before-quit', () => {
+  writeSystemLog('========== 應用程式關閉 ==========')
 })
