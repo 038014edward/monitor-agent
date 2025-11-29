@@ -4,7 +4,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
-    executableName: 'ServiceMonitorAgent',
+    executableName: 'MonitorAgent',
     icon: './assets/icon', // 不需要副檔名，Electron Packager 會自動選擇適合的平台格式
   },
   rebuildConfig: {},
@@ -12,7 +12,7 @@ module.exports = {
     {
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: 'ServiceMonitorAgent',
+        name: 'MonitorAgent',
         authors: 'CMUBH',
         description: 'A service agent monitoring application',
       },

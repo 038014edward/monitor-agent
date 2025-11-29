@@ -1,6 +1,6 @@
 {
   "name": "service-monitor-agent",
-  "productName": "Service Monitor Agent",
+  "productName": "Monitor Agent",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {

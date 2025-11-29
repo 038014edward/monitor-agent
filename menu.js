@@ -75,8 +75,8 @@ function createApplicationMenu() {
             const { dialog } = require('electron')
             await dialog.showMessageBox({
               type: 'info',
-              title: '關於 Service Monitor Agent',
-              message: 'Service Monitor Agent',
+              title: '關於 Monitor Agent',
+              message: 'Monitor Agent',
               detail: `版本: ${app.getVersion()}\n\n一個簡單的服務監控代理程式`,
               buttons: ['確定']
             })

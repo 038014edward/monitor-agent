@@ -136,7 +136,7 @@ function createWindow() {
 // ==================== 3. 建立系統托盤 ====================
 function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon-32.png'))
-  tray.setToolTip('Service Monitor Agent')
+  tray.setToolTip('Monitor Agent')
 
   const contextMenu = Menu.buildFromTemplate([
     {
