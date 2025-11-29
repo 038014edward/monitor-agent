@@ -17,6 +17,13 @@ const browseBtn = document.getElementById('browseBtn')
 const confirmAddBtn = document.getElementById('confirmAddBtn')
 const cancelAddBtn = document.getElementById('cancelAddBtn')
 
+// 編輯間隔對話框元素
+const editIntervalDialog = document.getElementById('editIntervalDialog')
+const editIntervalInput = document.getElementById('editInterval')
+const confirmEditIntervalBtn = document.getElementById('confirmEditIntervalBtn')
+const cancelEditIntervalBtn = document.getElementById('cancelEditIntervalBtn')
+let currentEditingMonitorId = null
+
 // 分隔條拖曳相關
 const resizer = document.querySelector('.resizer')
 const monitorSection = document.querySelector('.monitor-section')
@@ -161,9 +168,27 @@ const renderMonitorTable = () => {
       textContent: monitor.lastCheck || '-'
     }))
 
-    row.appendChild(createElement('td', {
-      textContent: monitor.interval.toString()
-    }))
+    // 間隔欄位 - 可點擊編輯
+    const intervalCell = createElement('td', {
+      textContent: monitor.interval.toString(),
+      style: {
+        cursor: monitor.isMonitoring ? 'not-allowed' : 'pointer',
+        color: monitor.isMonitoring ? '#999' : '#007E8A',
+        textDecoration: monitor.isMonitoring ? 'none' : 'underline'
+      },
+      title: monitor.isMonitoring ? '監控中無法修改' : '點擊編輯間隔'
+    })
+
+    intervalCell.addEventListener('click', (e) => {
+      e.stopPropagation()
+      if (!monitor.isMonitoring) {
+        showEditIntervalDialog(monitor.id, monitor.interval)
+      } else {
+        showStatus('⚠️ 請先停止監控再修改間隔', false)
+      }
+    })
+
+    row.appendChild(intervalCell)
 
     const actionCell = createElement('td')
     actionCell.appendChild(actionButtons)
@@ -352,6 +377,19 @@ const hideAddDialog = () => {
   addDialog.style.display = 'none'
 }
 
+const showEditIntervalDialog = (monitorId, currentInterval) => {
+  currentEditingMonitorId = monitorId
+  editIntervalInput.value = currentInterval
+  editIntervalDialog.style.display = 'flex'
+  // 自動選中輸入框內容
+  setTimeout(() => editIntervalInput.select(), 100)
+}
+
+const hideEditIntervalDialog = () => {
+  editIntervalDialog.style.display = 'none'
+  currentEditingMonitorId = null
+}
+
 // ==================== 事件處理 ====================
 // 表格中的按鈕點擊
 monitorTableBody.addEventListener('click', async (e) => {
@@ -506,6 +544,36 @@ cancelAddBtn.addEventListener('click', hideAddDialog)
 addDialog.addEventListener('click', (e) => {
   if (e.target === addDialog) {
     hideAddDialog()
+  }
+})
+
+// 編輯間隔對話框事件
+confirmEditIntervalBtn.addEventListener('click', async () => {
+  const newInterval = parseInt(editIntervalInput.value)
+
+  if (!newInterval || newInterval < 1 || newInterval > 3600) {
+    showStatus('❌ 間隔必須在 1-3600 秒之間', false)
+    return
+  }
+
+  if (currentEditingMonitorId) {
+    const monitor = monitors.find(m => m.id === currentEditingMonitorId)
+    if (monitor) {
+      monitor.interval = newInterval
+      await saveMonitors()
+      renderMonitorTable()
+      showStatus(`✓ 已更新間隔為 ${newInterval} 秒`, true)
+    }
+  }
+
+  hideEditIntervalDialog()
+})
+
+cancelEditIntervalBtn.addEventListener('click', hideEditIntervalDialog)
+
+editIntervalDialog.addEventListener('click', (e) => {
+  if (e.target === editIntervalDialog) {
+    hideEditIntervalDialog()
   }
 })
 
