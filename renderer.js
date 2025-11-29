@@ -281,6 +281,7 @@ const startMonitor = async (id) => {
 
     if (result.success) {
       monitor.isMonitoring = true
+      await saveMonitors()
       renderMonitorTable()
       showStatus(`✓ 已開始監控 ${getExeFileName(monitor.exePath)}`, true)
     } else {
@@ -302,6 +303,7 @@ const stopMonitor = async (id) => {
       monitor.isMonitoring = false
       monitor.status = '未監控'
       monitor.lastCheck = '-'
+      await saveMonitors()
       renderMonitorTable()
       showStatus(`✓ 已停止監控 ${getExeFileName(monitor.exePath)}`, true)
     } else {
@@ -340,7 +342,8 @@ const saveMonitors = async () => {
       id: m.id,
       exePath: m.exePath,
       interval: m.interval,
-      autoRestart: m.autoRestart || false
+      autoRestart: m.autoRestart || false,
+      isMonitoring: m.isMonitoring || false
     }))
     await window.electronAPI.saveMonitors(monitorsToSave)
   } catch (error) {
@@ -360,6 +363,13 @@ const loadMonitors = async () => {
         autoRestart: m.autoRestart || false
       }))
       renderMonitorTable()
+
+      // 自動啟動之前正在監控的項目
+      for (const m of savedMonitors) {
+        if (m.isMonitoring) {
+          await startMonitor(m.id)
+        }
+      }
     }
   } catch (error) {
     console.error('載入失敗:', error)
@@ -505,8 +515,8 @@ confirmAddBtn.addEventListener('click', async () => {
     return
   }
 
-  if (interval < 1 || interval > 3600) {
-    showStatus('❌ 監控間隔必須在 1-3600 秒之間', false)
+  if (interval < 5 || interval > 3600) {
+    showStatus('❌ 監控間隔必須在 5-3600 秒之間', false)
     return
   }
 
@@ -528,7 +538,7 @@ confirmAddBtn.addEventListener('click', async () => {
     isMonitoring: false,
     status: '未監控',
     lastCheck: '-',
-    autoRestart: false
+    autoRestart: true
   }
 
   monitors.push(newMonitor)
@@ -551,8 +561,8 @@ addDialog.addEventListener('click', (e) => {
 confirmEditIntervalBtn.addEventListener('click', async () => {
   const newInterval = parseInt(editIntervalInput.value)
 
-  if (!newInterval || newInterval < 1 || newInterval > 3600) {
-    showStatus('❌ 間隔必須在 1-3600 秒之間', false)
+  if (!newInterval || newInterval < 5 || newInterval > 3600) {
+    showStatus('❌ 間隔必須在 5-3600 秒之間', false)
     return
   }
 
