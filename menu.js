@@ -6,6 +6,9 @@ const fs = require('fs')
 function createApplicationMenu() {
   const logsDir = path.join(app.getPath('userData'), 'logs')
 
+  // 檢查當前是否設定為開機啟動
+  const isAutoLaunch = app.getLoginItemSettings().openAtLogin
+
   const template = [
     // 日誌選單
     {
@@ -28,6 +31,25 @@ function createApplicationMenu() {
                 buttons: ['確定']
               })
             }
+          }
+        }
+      ]
+    },
+
+    // 設定選單
+    {
+      label: '設定',
+      submenu: [
+        {
+          label: '開機時自動啟動',
+          type: 'checkbox',
+          checked: isAutoLaunch,
+          click: (menuItem) => {
+            const enabled = menuItem.checked
+            app.setLoginItemSettings({
+              openAtLogin: enabled,
+              openAsHidden: true
+            })
           }
         }
       ]
