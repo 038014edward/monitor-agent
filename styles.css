@@ -100,7 +100,7 @@ html, body {
 
 /* 監控列表區域 (上方) */
 .monitor-section {
-  flex: 0 0 60%;
+  flex: 0 0 20%;
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid var(--border-color);
@@ -109,14 +109,20 @@ html, body {
 
 /* 分隔條 */
 .resizer {
-  height: 4px;
+  height: 6px;
   background-color: var(--border-color);
   cursor: ns-resize;
   flex-shrink: 0;
+  transition: background-color 0.2s;
+  position: relative;
 }
 
 .resizer:hover {
   background-color: var(--primary-color);
+}
+
+.resizer:active {
+  background-color: var(--secondary-color);
 }
 
 /* 日誌區域 (下方) */
@@ -188,10 +194,6 @@ html, body {
   background-color: var(--selected-row-bg);
 }
 
-.monitor-table tbody tr.monitoring {
-  background-color: #E8F5E9;
-}
-
 .monitor-table td {
   padding: 8px 10px;
   border-right: 1px solid #E8E8E8;
@@ -250,6 +252,10 @@ html, body {
 
 .action-btn.delete {
   color: var(--danger-color);
+}
+
+.action-btn.copy {
+  color: var(--primary-color);
 }
 
 .action-btn:disabled {

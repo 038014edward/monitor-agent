@@ -3,6 +3,7 @@ const monitorTableBody = document.getElementById('monitorTableBody')
 const logContainer = document.getElementById('logContainer')
 const statusMessage = document.getElementById('statusMessage')
 const addDialog = document.getElementById('addDialog')
+const logSectionTitle = document.getElementById('logSectionTitle')
 
 // 工具列按鈕
 const addBtn = document.getElementById('addBtn')
@@ -18,6 +19,11 @@ const cancelAddBtn = document.getElementById('cancelAddBtn')
 
 // 日誌按鈕
 const clearLogBtn = document.getElementById('clearLogBtn')
+
+// 分隔條拖曳相關
+const resizer = document.querySelector('.resizer')
+const monitorSection = document.querySelector('.monitor-section')
+const logSection = document.querySelector('.log-section')
 
 // ==================== 狀態管理 ====================
 let monitors = []
@@ -104,13 +110,20 @@ const renderMonitorTable = () => {
       disabled: monitor.isMonitoring
     })
 
+    const copyBtn = createElement('button', {
+      className: 'action-btn copy',
+      textContent: '複製路徑',
+      dataset: { action: 'copy', id: monitor.id },
+      title: '複製程式路徑'
+    })
+
     actionButtons.appendChild(toggleBtn)
     actionButtons.appendChild(deleteBtn)
+    actionButtons.appendChild(copyBtn)
 
     // 建立表格列
     const row = createElement('tr', {
-      dataset: { id: monitor.id },
-      className: monitor.isMonitoring ? 'monitoring' : ''
+      dataset: { id: monitor.id }
     })
 
     if (selectedMonitorId === monitor.id) {
@@ -152,6 +165,14 @@ const renderMonitorTable = () => {
 // ==================== 選擇監控項目 ====================
 const selectMonitor = (id) => {
   selectedMonitorId = id
+
+  // 更新日誌標題顯示所選程式名稱
+  const monitor = monitors.find(m => m.id === id)
+  if (monitor) {
+    const programName = monitor.exePath.split(/[/\\]/).pop()
+    logSectionTitle.textContent = `活動日誌 - ${programName}`
+  }
+
   renderMonitorTable()
   loadMonitorLog(id)
 }
@@ -324,8 +345,24 @@ monitorTableBody.addEventListener('click', async (e) => {
     await toggleMonitor(id)
   } else if (action === 'delete') {
     await deleteMonitor(id)
+  } else if (action === 'copy') {
+    await copyMonitorPath(id)
   }
 })
+
+// 複製監控程式路徑
+const copyMonitorPath = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (monitor) {
+    try {
+      await navigator.clipboard.writeText(monitor.exePath)
+      showStatus(`✓ 已複製路徑: ${monitor.exePath}`, true)
+    } catch (error) {
+      showStatus('✗ 複製失敗', false)
+      console.error('複製失敗:', error)
+    }
+  }
+}
 
 // 工具列按鈕
 addBtn.addEventListener('click', showAddDialog)
@@ -451,8 +488,10 @@ window.electronAPI.onMonitorStatus((data) => {
     }
     renderMonitorTable()
 
-    // 如果是選中的監控項目，重新載入日誌
+    // 如果是選中的監控項目,重新載入日誌並更新標題
     if (selectedMonitorId === monitor.id) {
+      const programName = monitor.exePath.split(/[/\\]/).pop()
+      logSectionTitle.textContent = `活動日誌 - ${programName}`
       loadMonitorLog(monitor.id)
     }
   }
@@ -460,3 +499,41 @@ window.electronAPI.onMonitorStatus((data) => {
 
 // ==================== 初始化 ====================
 loadMonitors()
+
+// ==================== 分隔線拖拽功能 ====================
+let isResizing = false
+let startY = 0
+let startHeight = 0
+
+resizer.addEventListener('mousedown', (e) => {
+  isResizing = true
+  startY = e.clientY
+  startHeight = monitorSection.offsetHeight
+  document.body.style.cursor = 'row-resize'
+  document.body.style.userSelect = 'none'
+  e.preventDefault()
+})
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return
+
+  const deltaY = e.clientY - startY
+  const newHeight = startHeight + deltaY
+  const containerHeight = monitorSection.parentElement.offsetHeight
+
+  // 限制最小和最大高度 (20% - 80%)
+  const minHeight = containerHeight * 0.2
+  const maxHeight = containerHeight * 0.8
+
+  if (newHeight >= minHeight && newHeight <= maxHeight) {
+    monitorSection.style.flexBasis = `${newHeight}px`
+  }
+})
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+})
