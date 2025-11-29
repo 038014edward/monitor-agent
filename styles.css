@@ -204,6 +204,31 @@ html, body {
 }
 
 /* 狀態標籤 */
+.monitoring-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #E0E0E0;
+  flex-shrink: 0;
+  transition: background-color 0.3s;
+}
+
+.monitoring-indicator.active {
+  background-color: var(--accent-color);
+  box-shadow: 0 0 4px var(--accent-color);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .status-badge {
   display: inline-block;
   padding: 3px 8px;

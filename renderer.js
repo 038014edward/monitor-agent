@@ -17,9 +17,6 @@ const browseBtn = document.getElementById('browseBtn')
 const confirmAddBtn = document.getElementById('confirmAddBtn')
 const cancelAddBtn = document.getElementById('cancelAddBtn')
 
-// 日誌按鈕
-const clearLogBtn = document.getElementById('clearLogBtn')
-
 // 分隔條拖曳相關
 const resizer = document.querySelector('.resizer')
 const monitorSection = document.querySelector('.monitor-section')
@@ -89,10 +86,23 @@ const renderMonitorTable = () => {
       statusClass = monitor.status === '執行中' ? 'running' : 'stopped'
     }
 
+    // 監測中指示器 (圓點)
+    const monitoringIndicator = createElement('span', {
+      className: `monitoring-indicator ${monitor.isMonitoring ? 'active' : ''}`,
+      title: monitor.isMonitoring ? '監測中' : '未監測'
+    })
+
     const statusBadge = createElement('span', {
       className: `status-badge ${statusClass}`,
       textContent: monitor.status || '未監控'
     })
+
+    // 狀態容器 (指示器 + 標籤)
+    const statusContainer = createElement('div', {
+      style: { display: 'flex', alignItems: 'center', gap: '8px' }
+    })
+    statusContainer.appendChild(monitoringIndicator)
+    statusContainer.appendChild(statusBadge)
 
     // 操作按鈕容器
     const actionButtons = createElement('div', { style: { whiteSpace: 'nowrap' } })
@@ -136,7 +146,7 @@ const renderMonitorTable = () => {
     }))
 
     const statusCell = createElement('td')
-    statusCell.appendChild(statusBadge)
+    statusCell.appendChild(statusContainer)
     row.appendChild(statusCell)
 
     row.appendChild(createElement('td', {
@@ -464,13 +474,6 @@ cancelAddBtn.addEventListener('click', hideAddDialog)
 addDialog.addEventListener('click', (e) => {
   if (e.target === addDialog) {
     hideAddDialog()
-  }
-})
-
-// 清除日誌
-clearLogBtn.addEventListener('click', () => {
-  if (selectedMonitorId) {
-    logContainer.innerHTML = '<div class="log-empty">日誌已清除</div>'
   }
 })
 
