@@ -88,10 +88,15 @@ function createApplicationMenu() {
     // 結束選單
     {
       label: '結束',
-      click: () => {
-        app.isQuitting = true
-        app.quit()
-      }
+      submenu: [
+        {
+          label: '結束程式',
+          click: () => {
+            app.isQuitting = true
+            app.quit()
+          }
+        }
+      ]
     }
   ]
 
