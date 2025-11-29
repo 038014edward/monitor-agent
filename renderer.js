@@ -127,9 +127,17 @@ const renderMonitorTable = () => {
       title: '複製程式路徑'
     })
 
+    const autoRestartBtn = createElement('button', {
+      className: `action-btn ${monitor.autoRestart ? 'auto-restart-on' : 'auto-restart-off'}`,
+      textContent: '自動重啟',
+      dataset: { action: 'toggleAutoRestart', id: monitor.id },
+      title: monitor.autoRestart ? '自動重啟:已啟用' : '自動重啟:已停用'
+    })
+
     actionButtons.appendChild(toggleBtn)
     actionButtons.appendChild(deleteBtn)
     actionButtons.appendChild(copyBtn)
+    actionButtons.appendChild(autoRestartBtn)
 
     // 建立表格列
     const row = createElement('tr', {
@@ -242,7 +250,8 @@ const startMonitor = async (id) => {
     const result = await window.electronAPI.startMonitoring({
       id: monitor.id,
       exePath: monitor.exePath,
-      interval: monitor.interval
+      interval: monitor.interval,
+      autoRestart: monitor.autoRestart || false
     })
 
     if (result.success) {
@@ -305,7 +314,8 @@ const saveMonitors = async () => {
     const monitorsToSave = monitors.map(m => ({
       id: m.id,
       exePath: m.exePath,
-      interval: m.interval
+      interval: m.interval,
+      autoRestart: m.autoRestart || false
     }))
     await window.electronAPI.saveMonitors(monitorsToSave)
   } catch (error) {
@@ -321,7 +331,8 @@ const loadMonitors = async () => {
         ...m,
         isMonitoring: false,
         status: '未監控',
-        lastCheck: '-'
+        lastCheck: '-',
+        autoRestart: m.autoRestart || false
       }))
       renderMonitorTable()
     }
@@ -357,6 +368,8 @@ monitorTableBody.addEventListener('click', async (e) => {
     await deleteMonitor(id)
   } else if (action === 'copy') {
     await copyMonitorPath(id)
+  } else if (action === 'toggleAutoRestart') {
+    toggleAutoRestart(id)
   }
 })
 
@@ -371,6 +384,24 @@ const copyMonitorPath = async (id) => {
       showStatus('✗ 複製失敗', false)
       console.error('複製失敗:', error)
     }
+  }
+}
+
+// 切換自動重啟功能
+const toggleAutoRestart = async (id) => {
+  const monitor = monitors.find(m => m.id === id)
+  if (monitor) {
+    monitor.autoRestart = !monitor.autoRestart
+    await saveMonitors()
+    renderMonitorTable()
+
+    // 如果正在監控,更新後端設定
+    if (monitor.isMonitoring) {
+      await window.electronAPI.updateAutoRestart(id, monitor.autoRestart)
+    }
+
+    const status = monitor.autoRestart ? '開啟' : '關閉'
+    showStatus(`✓ 已${status}自動重啟: ${getExeFileName(monitor.exePath)}`, true)
   }
 }
 
@@ -458,7 +489,8 @@ confirmAddBtn.addEventListener('click', async () => {
     interval,
     isMonitoring: false,
     status: '未監控',
-    lastCheck: '-'
+    lastCheck: '-',
+    autoRestart: false
   }
 
   monitors.push(newMonitor)

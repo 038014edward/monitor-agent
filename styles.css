@@ -283,6 +283,15 @@ html, body {
   color: var(--primary-color);
 }
 
+.action-btn.auto-restart-off {
+  color: #999;
+}
+
+.action-btn.auto-restart-on {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
 .action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

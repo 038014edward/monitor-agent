@@ -202,8 +202,8 @@ function setupIPC() {
   // 開始監控特定項目
   ipcMain.handle('monitor:start', async (event, config) => {
     try {
-      const { id, exePath, interval } = config
-      startProcessMonitoring(id, exePath, interval)
+      const { id, exePath, interval, autoRestart } = config
+      startProcessMonitoring(id, exePath, interval, autoRestart)
       return { success: true, message: '監控已啟動' }
     } catch (error) {
       return { success: false, message: '啟動監控失敗：' + error.message }
@@ -230,6 +230,22 @@ function setupIPC() {
     }
   })
 
+  // 更新自動重啟設定
+  ipcMain.handle('monitor:updateAutoRestart', async (event, id, autoRestart) => {
+    try {
+      const monitor = activeMonitors.get(id)
+      if (monitor) {
+        monitor.autoRestart = autoRestart
+        const status = autoRestart ? '開啟' : '關閉'
+        writeLog(monitor.exePath, `自動重啟已${status}`)
+        return { success: true }
+      }
+      return { success: false, message: '找不到監控項目' }
+    } catch (error) {
+      return { success: false, message: error.message }
+    }
+  })
+
   // 讀取監控日誌
   ipcMain.handle('log:getMonitorLog', async (event, exePath) => {
     try {
@@ -248,6 +264,25 @@ function setupIPC() {
     } catch (error) {
       console.error('讀取日誌失敗:', error)
       return []
+    }
+  })
+
+  // 啟動程式
+  ipcMain.handle('program:launch', async (event, exePath) => {
+    try {
+      if (!fs.existsSync(exePath)) {
+        return { success: false, message: '程式檔案不存在' }
+      }
+
+      exec(`"${exePath}"`, (error) => {
+        if (error) {
+          console.error('啟動程式錯誤:', error)
+        }
+      })
+
+      return { success: true, message: '程式已啟動' }
+    } catch (error) {
+      return { success: false, message: error.message }
     }
   })
 }
@@ -271,14 +306,14 @@ function checkProcessRunning(exePath) {
   })
 }
 
-function startProcessMonitoring(id, exePath, interval) {
+function startProcessMonitoring(id, exePath, interval, autoRestart = false) {
   // 如果已經在監控,先停止
   if (activeMonitors.has(id)) {
     stopProcessMonitoring(id)
   }
 
   const exeName = path.basename(exePath)
-  writeLog(exePath, `啟動監控 (間隔: ${interval}秒)`)
+  writeLog(exePath, `啟動監控 (間隔: ${interval}秒${autoRestart ? ', 自動重啟: 開' : ''})`)
 
   const checkAndNotify = async () => {
     const isRunning = await checkProcessRunning(exePath)
@@ -291,6 +326,22 @@ function startProcessMonitoring(id, exePath, interval) {
     if (monitor && monitor.lastStatus !== status) {
       writeLog(exePath, `狀態變更: ${status}`)
       monitor.lastStatus = status
+    }
+
+    // 如果啟用自動重啟且程式未執行,則重新啟動
+    if (!isRunning && monitor && monitor.autoRestart) {
+      writeLog(exePath, '偵測到程式停止,正在重新啟動...')
+      try {
+        exec(`"${exePath}"`, (error) => {
+          if (error) {
+            writeLog(exePath, `自動重啟失敗: ${error.message}`)
+          } else {
+            writeLog(exePath, '自動重啟成功')
+          }
+        })
+      } catch (error) {
+        writeLog(exePath, `自動重啟異常: ${error.message}`)
+      }
     }
 
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -309,8 +360,14 @@ function startProcessMonitoring(id, exePath, interval) {
   // 設定定時檢查
   const timer = setInterval(checkAndNotify, interval * 1000)
 
-  // 儲存監控資訊（加入 lastStatus 追蹤狀態變化）
-  activeMonitors.set(id, { exePath, interval, timer, lastStatus: null })
+  // 儲存監控資訊
+  activeMonitors.set(id, {
+    exePath,
+    interval,
+    timer,
+    lastStatus: null,
+    autoRestart
+  })
 } function stopProcessMonitoring(id) {
   const monitor = activeMonitors.get(id)
   if (monitor) {

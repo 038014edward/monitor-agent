@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startMonitoring: (config) => ipcRenderer.invoke('monitor:start', config),
   stopMonitoring: (id) => ipcRenderer.invoke('monitor:stop', id),
   stopAllMonitoring: () => ipcRenderer.invoke('monitor:stopAll'),
+  updateAutoRestart: (id, autoRestart) => ipcRenderer.invoke('monitor:updateAutoRestart', id, autoRestart),
+
+  // 啟動程式
+  launchProgram: (exePath) => ipcRenderer.invoke('program:launch', exePath),
 
   // 日誌相關功能
   getMonitorLog: (exePath) => ipcRenderer.invoke('log:getMonitorLog', exePath),
