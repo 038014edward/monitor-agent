@@ -1,5 +1,5 @@
 {
-  "name": "service-monitor-agent",
+  "name": "monitor-agent",
   "productName": "Monitor Agent",
   "version": "1.0.0",
   "main": "main.js",
