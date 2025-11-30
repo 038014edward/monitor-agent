@@ -1,5 +1,5 @@
 // ==================== 引入模組 ====================
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron/main')
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron')
 const Store = require('electron-store')
 const path = require('node:path')
 const fs = require('node:fs')
