@@ -239,8 +239,8 @@ const loadMonitorLog = async (id) => {
         })
         logContainer.appendChild(entry)
       })
-      // 自動捲動到底部
-      logContainer.scrollTop = logContainer.scrollHeight
+      // 自動捲動到頂部 (顯示最新記錄)
+      logContainer.scrollTop = 0
     } else {
       logContainer.innerHTML = '<div class="log-empty">暫無日誌記錄</div>'
     }

@@ -246,21 +246,47 @@ function setupIPC() {
     }
   })
 
-  // 讀取監控日誌
+  // 讀取監控日誌 (最近 7 天,最多 200 筆,按時間倒序)
   ipcMain.handle('log:getMonitorLog', async (event, exePath) => {
     try {
       const programName = getProgramName(exePath)
-      const dateString = getTodayDateString()
-      const logFileName = `${programName}_${dateString}.log`
-      const logFilePath = path.join(logsDir, logFileName)
+      const allLines = []
 
-      if (fs.existsSync(logFilePath)) {
-        const content = fs.readFileSync(logFilePath, 'utf8')
-        // 分割成行並過濾空行
-        const lines = content.split('\n').filter(line => line.trim())
-        return lines
+      // 讀取最近 7 天的日誌
+      for (let i = 0; i < 7; i++) {
+        const date = new Date()
+        date.setDate(date.getDate() - i)
+
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const dateString = `${year}-${month}-${day}`
+
+        const logFileName = `${programName}_${dateString}.log`
+        const logFilePath = path.join(logsDir, logFileName)
+
+        if (fs.existsSync(logFilePath)) {
+          const content = fs.readFileSync(logFilePath, 'utf8')
+          const lines = content.split('\n').filter(line => line.trim())
+
+          // 反轉該日的日誌順序 (最新的在前)
+          lines.reverse()
+
+          // 在每天的日誌前加上日期分隔線 (除了第一天)
+          if (allLines.length > 0 && lines.length > 0) {
+            allLines.push(`────── ${dateString} ──────`)
+          }
+
+          allLines.push(...lines)
+        }
       }
-      return []
+
+      // 如果超過 200 筆,只返回最前面的 200 筆 (最新的)
+      if (allLines.length > 200) {
+        return allLines.slice(0, 200)
+      }
+
+      return allLines
     } catch (error) {
       console.error('讀取日誌失敗:', error)
       return []
