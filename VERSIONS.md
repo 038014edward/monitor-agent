@@ -69,7 +69,7 @@ git commit -m "feat: add new feature"
 
 # 切換到 legacy 並 cherry-pick
 git checkout legacy
-git cherry-pick <commit-hash>
+git cherry-pick <起始-commit>..<結束-commit>
 
 # 解決可能的衝突
 git add .
