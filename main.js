@@ -246,41 +246,67 @@ function setupIPC() {
     }
   })
 
-  // 讀取監控日誌
+  // 讀取監控日誌 (最近 7 天,最多 200 筆,按時間倒序)
   ipcMain.handle('log:getMonitorLog', async (event, exePath) => {
     try {
       const programName = getProgramName(exePath)
-      const dateString = getTodayDateString()
-      const logFileName = `${programName}_${dateString}.log`
-      const logFilePath = path.join(logsDir, logFileName)
+      const allLines = []
 
-      if (fs.existsSync(logFilePath)) {
-        const content = fs.readFileSync(logFilePath, 'utf8')
-        // 分割成行並過濾空行
-        const lines = content.split('\n').filter(line => line.trim())
-        return lines
+      // 讀取最近 7 天的日誌
+      for (let i = 0; i < 7; i++) {
+        const date = new Date()
+        date.setDate(date.getDate() - i)
+
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const dateString = `${year}-${month}-${day}`
+
+        const logFileName = `${programName}_${dateString}.log`
+        const logFilePath = path.join(logsDir, logFileName)
+
+        if (fs.existsSync(logFilePath)) {
+          const content = fs.readFileSync(logFilePath, 'utf8')
+          const lines = content.split('\n').filter(line => line.trim())
+
+          // 反轉該日的日誌順序 (最新的在前)
+          lines.reverse()
+
+          // 在每天的日誌前加上日期分隔線 (除了第一天)
+          if (allLines.length > 0 && lines.length > 0) {
+            allLines.push(`────── ${dateString} ──────`)
+          }
+
+          allLines.push(...lines)
+        }
       }
-      return []
+
+      // 如果超過 200 筆,只返回最前面的 200 筆 (最新的)
+      if (allLines.length > 200) {
+        return allLines.slice(0, 200)
+      }
+
+      return allLines
     } catch (error) {
       console.error('讀取日誌失敗:', error)
       return []
     }
   })
 
-  // 啟動程式
+  // 啟動程式 (使用快速驗證機制)
   ipcMain.handle('program:launch', async (event, exePath) => {
     try {
       if (!fs.existsSync(exePath)) {
         return { success: false, message: '程式檔案不存在' }
       }
 
-      exec(`"${exePath}"`, (error) => {
-        if (error) {
-          console.error('啟動程式錯誤:', error)
-        }
-      })
+      const result = await launchProgramAndVerify(exePath)
 
-      return { success: true, message: '程式已啟動' }
+      if (result.success) {
+        return { success: true, message: '程式已啟動並確認執行中' }
+      } else {
+        return { success: false, message: `啟動失敗: ${result.error || '未知錯誤'}` }
+      }
     } catch (error) {
       return { success: false, message: error.message }
     }
@@ -302,6 +328,38 @@ function checkProcessRunning(exePath) {
       // CSV 格式輸出,如果找到程式會包含程式名稱
       const isRunning = stdout.toLowerCase().includes(exeName.toLowerCase())
       resolve(isRunning)
+    })
+  })
+}
+
+// 啟動程式並快速驗證是否成功 (每3秒檢查,最多10次)
+async function launchProgramAndVerify(exePath) {
+  return new Promise((resolve) => {
+    // 先啟動程式
+    exec(`"${exePath}"`, async (error) => {
+      if (error) {
+        writeLog(exePath, `啟動失敗: ${error.message}`)
+        resolve({ success: false, error: error.message })
+        return
+      }
+
+      // 快速驗證程式是否啟動成功 (每1秒檢查一次,最多10次)
+      let attempts = 0
+      const maxAttempts = 10
+      const verifyInterval = setInterval(async () => {
+        attempts++
+        const isRunning = await checkProcessRunning(exePath)
+
+        if (isRunning) {
+          clearInterval(verifyInterval)
+          writeLog(exePath, `啟動成功 (驗證次數: ${attempts})`)
+          resolve({ success: true })
+        } else if (attempts >= maxAttempts) {
+          clearInterval(verifyInterval)
+          writeLog(exePath, `啟動驗證逾時 (已檢查 ${maxAttempts} 次)`)
+          resolve({ success: false, error: '啟動驗證逾時' })
+        }
+      }, 3000) // 每3秒檢查一次
     })
   })
 }
@@ -331,17 +389,24 @@ function startProcessMonitoring(id, exePath, interval, autoRestart = false) {
     // 如果啟用自動重啟且程式未執行,則重新啟動
     if (!isRunning && monitor && monitor.autoRestart) {
       writeLog(exePath, '偵測到程式停止,正在重新啟動...')
-      try {
-        exec(`"${exePath}"`, (error) => {
-          if (error) {
-            writeLog(exePath, `自動重啟失敗: ${error.message}`)
-          } else {
-            writeLog(exePath, '自動重啟成功')
-          }
-        })
-      } catch (error) {
-        writeLog(exePath, `自動重啟異常: ${error.message}`)
+
+      // 使用快速驗證機制重啟程式
+      const result = await launchProgramAndVerify(exePath)
+
+      if (result.success) {
+        // 重啟成功,立即更新狀態
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('monitor:status-update', {
+            id,
+            isRunning: true,
+            lastCheck: new Date().toLocaleTimeString('zh-TW'),
+            status: '執行中'
+          })
+        }
+        monitor.lastStatus = '執行中'
       }
+
+      return // 不再繼續發送未執行的狀態
     }
 
     if (mainWindow && !mainWindow.isDestroyed()) {
