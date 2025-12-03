@@ -5,8 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "clean": "rimraf out node_modules/.cache",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright test && playwright show-report",
     "clean:full": "rimraf out node_modules/.cache && node -e \"const fs=require('fs'); const path=require('path'); const cacheDir=path.join(process.env.LOCALAPPDATA||process.env.HOME, 'electron', 'Cache'); try{fs.rmSync(cacheDir, {recursive:true, force:true})}catch(e){}\"",
     "package": "npm run clean && electron-forge package",
     "make": "npm run clean && electron-forge make",
@@ -25,6 +26,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron/fuses": "^1.8.0",
+    "@playwright/test": "^1.57.0",
     "electron": "^39.2.2",
     "rimraf": "^5.0.10"
   },
