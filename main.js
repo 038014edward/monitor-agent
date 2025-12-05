@@ -92,10 +92,13 @@ function writeSystemLog(message) {
 }
 
 // ==================== 1. 限制單一實例 ====================
-const gotTheLock = app.requestSingleInstanceLock()
-if (!gotTheLock) {
-  app.quit()
-  process.exit(0)
+// 在測試環境下跳過單一實例檢查
+if (process.env.NODE_ENV !== 'test') {
+  const gotTheLock = app.requestSingleInstanceLock()
+  if (!gotTheLock) {
+    app.quit()
+    process.exit(0)
+  }
 }
 
 // 當使用者嘗試開啟第二個實例時,顯示現有視窗
