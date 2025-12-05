@@ -6,8 +6,18 @@ const fs = require('node:fs')
 const { exec } = require('node:child_process')
 const { createApplicationMenu } = require('./menu')
 
+// ==================== 設定 App Name ====================
+// 確保測試環境也使用正確的 app name，這樣 electron-store 會存在正確的位置
+if (process.env.NODE_ENV === 'test') {
+  app.setName('Monitor Agent')
+}
+
 // ==================== 全域變數 ====================
-const store = new Store()
+// 在測試環境使用獨立的儲存設定
+const storeOptions = process.env.NODE_ENV === 'test'
+  ? { name: 'config-test' }
+  : {}
+const store = new Store(storeOptions)
 let mainWindow = null
 let tray = null
 // 使用 Map 來管理多個監控項目: id -> {exePath, interval, timer}
